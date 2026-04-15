@@ -1,0 +1,13 @@
+{
+  "name": "ecoh-portal",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter './apps/*' dev",
+    "build": "pnpm --filter './packages/*' build && pnpm --filter './apps/*' build",
+    "test": "pnpm --filter './apps/*' test",
+    "lint": "pnpm --filter './apps/*' lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

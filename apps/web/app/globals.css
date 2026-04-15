@@ -1,0 +1,148 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300;1,8..60,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Variables CSS (canales R G B para compatibilidad con Tailwind opacity) ── */
+:root {
+  /* Tema: Claro (por defecto) */
+  --azul:           28 63 129;
+  --azul-hover:     21 47 97;
+  --azul-claro:     232 237 246;
+  --azul-medio:     194 207 224;
+  --azul-suave:     240 244 251;
+  --rojo:           184 13 14;
+  --rojo-hover:     154 11 12;
+  --rojo-claro:     253 240 240;
+  --rojo-borde:     240 184 184;
+  --gris-bg:        244 246 249;
+  --gris-borde:     221 227 237;
+  --texto:          26 39 64;
+  --texto-suave:    74 90 120;
+  --texto-tenue:    138 154 184;
+  --verde:          26 102 64;
+  --verde-bg:       237 247 240;
+  --verde-borde:    176 216 188;
+  --naranja:        122 74 0;
+  --naranja-bg:     254 246 232;
+  --naranja-borde:  240 216 152;
+  /* Extra (no en Tailwind) */
+  --topbar-bg:      28 63 129;
+  --card-bg:        255 255 255;
+}
+
+/* ── Tema: Oscuro ─────────────────────────────────────────────────────────── */
+[data-theme="oscuro"] {
+  --azul:           74 127 212;
+  --azul-hover:     94 147 232;
+  --azul-claro:     28 55 100;
+  --azul-medio:     50 85 140;
+  --azul-suave:     15 26 50;
+  --rojo:           229 79 79;
+  --rojo-hover:     209 59 59;
+  --rojo-claro:     40 12 12;
+  --rojo-borde:     90 24 24;
+  --gris-bg:        10 14 24;
+  --gris-borde:     32 50 78;
+  --texto:          228 238 255;
+  --texto-suave:    158 186 224;
+  --texto-tenue:    100 135 178;
+  --verde:          52 186 120;
+  --verde-bg:       8 28 20;
+  --verde-borde:    20 60 42;
+  --naranja:        240 168 60;
+  --naranja-bg:     36 22 4;
+  --naranja-borde:  80 46 10;
+  --topbar-bg:      8 16 32;
+  --card-bg:        18 28 48;
+}
+
+/* ── Tema: Elegante (Índigo) ──────────────────────────────────────────────── */
+[data-theme="elegante"] {
+  --azul:           79 70 229;
+  --azul-hover:     67 56 202;
+  --azul-claro:     238 242 255;
+  --azul-medio:     199 210 254;
+  --azul-suave:     245 243 255;
+  --rojo:           220 38 38;
+  --rojo-hover:     185 28 28;
+  --rojo-claro:     254 242 242;
+  --rojo-borde:     254 202 202;
+  --gris-bg:        248 247 255;
+  --gris-borde:     220 218 245;
+  --texto:          30 27 75;
+  --texto-suave:    67 56 202;
+  --texto-tenue:    165 180 252;
+  --verde:          5 150 105;
+  --verde-bg:       236 253 245;
+  --verde-borde:    167 243 208;
+  --naranja:        146 64 14;
+  --naranja-bg:     255 251 235;
+  --naranja-borde:  253 230 138;
+  --topbar-bg:      49 46 129;
+  --card-bg:        255 255 255;
+}
+
+/* ── Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background-color: rgb(var(--gris-bg));
+  color: rgb(var(--texto));
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Cards blancas respetan el tema */
+.bg-white { background-color: rgb(var(--card-bg)) !important; }
+[data-theme="oscuro"] input,
+[data-theme="oscuro"] textarea,
+[data-theme="oscuro"] select {
+  background-color: rgb(var(--azul-suave)) !important;
+  color: rgb(var(--texto)) !important;
+  border-color: rgb(var(--gris-borde)) !important;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--azul-medio); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--azul); }
+
+/* ── Utilidades de texto ── */
+.font-mono { font-family: 'IBM Plex Mono', monospace; }
+.font-serif { font-family: 'Source Serif 4', Georgia, serif; }
+
+/* ── Página de impresión ── */
+.print-content {
+  padding-top: 60pt; /* espacio para la barra .no-print en pantalla */
+}
+
+@media screen {
+  .print-content-page { background: #e8ecf2; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+
+  .print-content {
+    padding-top: 0 !important; /* la barra está oculta; no se necesita espacio */
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}

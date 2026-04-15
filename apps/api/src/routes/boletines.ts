@@ -1,0 +1,350 @@
+import type { FastifyInstance } from 'fastify'
+import { eq, desc } from 'drizzle-orm'
+import { z } from 'zod'
+import { db } from '../db/index.js'
+import {
+  boletin, caso, imputado, victima, incautacion, lugar, noticia, fotografia, fiscal,
+  pEstadoBoletin, pTipoDelito, pEstadoCausa, pComuna, pTipoEspecie,
+  pCalidadVictima, pTipoLesiones, pTipoFoto, usuario,
+} from '../db/schema.js'
+
+// ── Schemas de validación ─────────────────────────────────────────────────────
+
+const CrearBoletinSchema = z.object({
+  numero:     z.number().int().positive(),
+  fechaDesde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato YYYY-MM-DD'),
+  fechaHasta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato YYYY-MM-DD'),
+  idEstado:   z.number().int().positive().optional(),
+  resumen:    z.string().optional(),
+})
+
+const ActualizarBoletinSchema = z.object({
+  resumen:  z.string().optional(),
+  idEstado: z.number().int().positive().optional(),
+  fechaPub: z.string().datetime().optional(),
+})
+
+// ── Rutas ─────────────────────────────────────────────────────────────────────
+
+export async function boletinesRoutes(app: FastifyInstance) {
+
+  // GET /boletines — lista paginada con resumen de casos
+  app.get('/', {}, async (request, reply) => {
+    const { page = '1', limit = '20' } = request.query as Record<string, string>
+    const offset = (parseInt(page) - 1) * parseInt(limit)
+
+    const filas = await db
+      .select({
+        id:         boletin.id,
+        numero:     boletin.numero,
+        fechaDesde: boletin.fechaDesde,
+        fechaHasta: boletin.fechaHasta,
+        estado:     pEstadoBoletin.codigo,
+        estadoNombre: pEstadoBoletin.nombre,
+        analista:   usuario.nombre,
+        resumen:    boletin.resumen,
+        createdAt:  boletin.createdAt,
+      })
+      .from(boletin)
+      .innerJoin(pEstadoBoletin, eq(boletin.idEstado, pEstadoBoletin.id))
+      .leftJoin(usuario, eq(boletin.idAnalista, usuario.id))
+      .orderBy(desc(boletin.numero))
+      .limit(parseInt(limit))
+      .offset(offset)
+
+    return reply.send(filas)
+  })
+
+  // POST /boletines — crear nuevo boletín (sólo analistas)
+  app.post('/', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const body = CrearBoletinSchema.safeParse(request.body)
+    if (!body.success) {
+      return reply.status(400).send({ error: 'Datos inválidos', details: body.error.flatten() })
+    }
+
+    const { sub: idAnalista } = request.user
+
+    // Estado por defecto: borrador
+    let idEstado = body.data.idEstado
+    if (!idEstado) {
+      const [borrador] = await db
+        .select({ id: pEstadoBoletin.id })
+        .from(pEstadoBoletin)
+        .where(eq(pEstadoBoletin.codigo, 'borrador'))
+        .limit(1)
+      idEstado = borrador.id
+    }
+
+    const [nuevo] = await db
+      .insert(boletin)
+      .values({
+        numero:     body.data.numero,
+        fechaDesde: body.data.fechaDesde,
+        fechaHasta: body.data.fechaHasta,
+        idAnalista,
+        idEstado,
+        resumen:    body.data.resumen,
+      })
+      .returning()
+
+    return reply.status(201).send(nuevo)
+  })
+
+  // GET /boletines/:id — boletín con todos sus casos
+  app.get('/:id', {}, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const boletinId = parseInt(id)
+
+    const [cab] = await db
+      .select({
+        id:           boletin.id,
+        numero:       boletin.numero,
+        fechaDesde:   boletin.fechaDesde,
+        fechaHasta:   boletin.fechaHasta,
+        provincia:    boletin.provincia,
+        region:       boletin.region,
+        estado:       pEstadoBoletin.codigo,
+        estadoNombre: pEstadoBoletin.nombre,
+        analista:     usuario.nombre,
+        resumen:      boletin.resumen,
+        fechaPub:     boletin.fechaPub,
+        createdAt:    boletin.createdAt,
+        updatedAt:    boletin.updatedAt,
+      })
+      .from(boletin)
+      .innerJoin(pEstadoBoletin, eq(boletin.idEstado, pEstadoBoletin.id))
+      .leftJoin(usuario, eq(boletin.idAnalista, usuario.id))
+      .where(eq(boletin.id, boletinId))
+      .limit(1)
+
+    if (!cab) return reply.status(404).send({ error: 'Boletín no encontrado' })
+
+    const casos = await db
+      .select({
+        id:              caso.id,
+        numeroCaso:      caso.numeroCaso,
+        fechaHecho:      caso.fechaHecho,
+        ruc:             caso.ruc,
+        tipoDelito:      pTipoDelito.codigo,
+        tipoDelitoNombre: pTipoDelito.nombre,
+        estadoCausa:     pEstadoCausa.codigo,
+        estadoCausaNombre: pEstadoCausa.nombre,
+        relatoBreve:     caso.relatoBreve,
+        unidadPolicial:  caso.unidadPolicial,
+      })
+      .from(caso)
+      .innerJoin(pTipoDelito,  eq(caso.idTipoDelitoPpal, pTipoDelito.id))
+      .innerJoin(pEstadoCausa, eq(caso.idEstadoCausa,    pEstadoCausa.id))
+      .where(eq(caso.idBoletin, boletinId))
+      .orderBy(caso.numeroCaso)
+
+    return reply.send({ ...cab, casos })
+  })
+
+  // GET /boletines/:id/export — datos completos para generación de PDF
+  app.get('/:id/export', {}, async (request, reply) => {
+    const boletinId = parseInt((request.params as { id: string }).id)
+
+    const [cab] = await db
+      .select({
+        id:           boletin.id,
+        numero:       boletin.numero,
+        fechaDesde:   boletin.fechaDesde,
+        fechaHasta:   boletin.fechaHasta,
+        provincia:    boletin.provincia,
+        region:       boletin.region,
+        estado:       pEstadoBoletin.codigo,
+        estadoNombre: pEstadoBoletin.nombre,
+        analista:     usuario.nombre,
+        resumen:      boletin.resumen,
+        fechaPub:     boletin.fechaPub,
+      })
+      .from(boletin)
+      .innerJoin(pEstadoBoletin, eq(boletin.idEstado, pEstadoBoletin.id))
+      .leftJoin(usuario, eq(boletin.idAnalista, usuario.id))
+      .where(eq(boletin.id, boletinId))
+      .limit(1)
+
+    if (!cab) return reply.status(404).send({ error: 'Boletín no encontrado' })
+
+    const casos = await db
+      .select({
+        id:                caso.id,
+        numeroCaso:        caso.numeroCaso,
+        fechaHecho:        caso.fechaHecho,
+        horaHecho:         caso.horaHecho,
+        ruc:               caso.ruc,
+        folioBitacora:     caso.folioBitacora,
+        tipoDelitoNombre:  pTipoDelito.nombre,
+        estadoCausaNombre: pEstadoCausa.nombre,
+        relatoBreve:       caso.relatoBreve,
+        diligencias:       caso.diligencias,
+        observaciones:     caso.observaciones,
+        unidadPolicial:    caso.unidadPolicial,
+        plazoInvestDias:   caso.plazoInvestDias,
+        fiscal:            fiscal.nombre,
+      })
+      .from(caso)
+      .innerJoin(pTipoDelito,  eq(caso.idTipoDelitoPpal, pTipoDelito.id))
+      .innerJoin(pEstadoCausa, eq(caso.idEstadoCausa,    pEstadoCausa.id))
+      .leftJoin(fiscal,        eq(caso.idFiscal,         fiscal.id))
+      .where(eq(caso.idBoletin, boletinId))
+      .orderBy(caso.numeroCaso)
+
+    // Para cada caso, traer entidades relacionadas en paralelo
+    const casosConDetalle = await Promise.all(casos.map(async (c) => {
+      const [lugaresCaso, imputadosCaso, victimasCaso, incautacionesCaso, noticiasCaso, fotografiasCaso] =
+        await Promise.all([
+          db.select({
+            direccion: lugar.direccion,
+            sector:    lugar.sector,
+            comuna:    pComuna.nombre,
+          })
+          .from(lugar)
+          .leftJoin(pComuna, eq(lugar.idComuna, pComuna.id))
+          .where(eq(lugar.idCaso, c.id)),
+
+          db.select({
+            apellidoPaterno:    imputado.apellidoPaterno,
+            apellidoMaterno:    imputado.apellidoMaterno,
+            nombres:            imputado.nombres,
+            numCausasPrevias:   imputado.numCausasPrevias,
+            alertaReincidencia: imputado.alertaReincidencia,
+          })
+          .from(imputado)
+          .where(eq(imputado.idCaso, c.id)),
+
+          db.select({
+            nombre:       victima.nombre,
+            calidad:      pCalidadVictima.nombre,
+            tipoLesiones: pTipoLesiones.nombre,
+          })
+          .from(victima)
+          .leftJoin(pCalidadVictima, eq(victima.idCalidad,      pCalidadVictima.id))
+          .leftJoin(pTipoLesiones,   eq(victima.idTipoLesiones, pTipoLesiones.id))
+          .where(eq(victima.idCaso, c.id)),
+
+          db.select({
+            descripcion:      incautacion.descripcion,
+            tipoEspecie:      pTipoEspecie.nombre,
+            cantidad:         incautacion.cantidad,
+            unidadMedida:     incautacion.unidadMedida,
+          })
+          .from(incautacion)
+          .leftJoin(pTipoEspecie, eq(incautacion.idTipoEspecie, pTipoEspecie.id))
+          .where(eq(incautacion.idCaso, c.id)),
+
+          db.select({ url: noticia.url, medio: noticia.medio, titular: noticia.titular, bajada: noticia.bajada })
+          .from(noticia)
+          .where(eq(noticia.idCaso, c.id)),
+
+          db.select({
+            archivoUrl:  fotografia.archivoUrl,
+            descripcion: fotografia.descripcion,
+            tipoFoto:    pTipoFoto.nombre,
+            orden:       fotografia.orden,
+          })
+          .from(fotografia)
+          .leftJoin(pTipoFoto, eq(fotografia.idTipoFoto, pTipoFoto.id))
+          .where(eq(fotografia.idCaso, c.id))
+          .orderBy(fotografia.orden),
+        ])
+
+      return {
+        ...c,
+        lugar:         lugaresCaso[0] ?? null,
+        imputados:     imputadosCaso,
+        victimas:      victimasCaso,
+        incautaciones: incautacionesCaso,
+        noticias:      noticiasCaso,
+        fotografias:   fotografiasCaso,
+      }
+    }))
+
+    return reply.send({ ...cab, casos: casosConDetalle })
+  })
+
+  // PATCH /boletines/:id/publicar — marcar como publicado (sólo analistas)
+  app.patch('/:id/publicar', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const boletinId = parseInt((request.params as { id: string }).id)
+
+    const [existente] = await db
+      .select({ id: boletin.id })
+      .from(boletin)
+      .where(eq(boletin.id, boletinId))
+      .limit(1)
+
+    if (!existente) return reply.status(404).send({ error: 'Boletín no encontrado' })
+
+    const [estadoPublicado] = await db
+      .select({ id: pEstadoBoletin.id })
+      .from(pEstadoBoletin)
+      .where(eq(pEstadoBoletin.codigo, 'publicado'))
+      .limit(1)
+
+    const [actualizado] = await db
+      .update(boletin)
+      .set({ idEstado: estadoPublicado.id, fechaPub: new Date() })
+      .where(eq(boletin.id, boletinId))
+      .returning()
+
+    return reply.send(actualizado)
+  })
+
+  // PATCH /boletines/:id/despublicar — volver a borrador (sólo analistas)
+  app.patch('/:id/despublicar', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const boletinId = parseInt((request.params as { id: string }).id)
+
+    const [existente] = await db
+      .select({ id: boletin.id })
+      .from(boletin)
+      .where(eq(boletin.id, boletinId))
+      .limit(1)
+
+    if (!existente) return reply.status(404).send({ error: 'Boletín no encontrado' })
+
+    const [estadoBorrador] = await db
+      .select({ id: pEstadoBoletin.id })
+      .from(pEstadoBoletin)
+      .where(eq(pEstadoBoletin.codigo, 'borrador'))
+      .limit(1)
+
+    const [actualizado] = await db
+      .update(boletin)
+      .set({ idEstado: estadoBorrador.id, fechaPub: null })
+      .where(eq(boletin.id, boletinId))
+      .returning()
+
+    return reply.send(actualizado)
+  })
+
+  // PATCH /boletines/:id — actualizar estado o resumen (sólo analistas)
+  app.patch('/:id', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = ActualizarBoletinSchema.safeParse(request.body)
+    if (!body.success) {
+      return reply.status(400).send({ error: 'Datos inválidos', details: body.error.flatten() })
+    }
+
+    const [existente] = await db
+      .select({ id: boletin.id })
+      .from(boletin)
+      .where(eq(boletin.id, parseInt(id)))
+      .limit(1)
+
+    if (!existente) return reply.status(404).send({ error: 'Boletín no encontrado' })
+
+    const valores: Partial<typeof boletin.$inferInsert> = {}
+    if (body.data.resumen  !== undefined) valores.resumen  = body.data.resumen
+    if (body.data.idEstado !== undefined) valores.idEstado = body.data.idEstado
+    if (body.data.fechaPub !== undefined) valores.fechaPub = new Date(body.data.fechaPub)
+
+    const [actualizado] = await db
+      .update(boletin)
+      .set(valores)
+      .where(eq(boletin.id, parseInt(id)))
+      .returning()
+
+    return reply.send(actualizado)
+  })
+}

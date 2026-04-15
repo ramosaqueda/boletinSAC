@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portal ECOH — Fiscalía de Chile | Región de Coquimbo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300;1,400&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --azul: #1C3F81;
+    --azul-hover: #152f61;
+    --azul-claro: #e8edf6;
+    --azul-medio: #c2cfe0;
+    --azul-suave: #f0f4fb;
+    --rojo: #B80D0E;
+    --rojo-hover: #9a0b0c;
+    --rojo-claro: #fdf0f0;
+    --rojo-borde: #f0b8b8;
+    --blanco: #ffffff;
+    --gris-bg: #f4f6f9;
+    --gris-borde: #dde3ed;
+    --texto: #1a2740;
+    --texto-suave: #4a5a78;
+    --texto-tenue: #8a9ab8;
+    --verde: #1a6640;
+    --verde-bg: #edf7f0;
+    --verde-borde: #b0d8bc;
+    --naranja: #7a4a00;
+    --naranja-bg: #fef6e8;
+    --naranja-borde: #f0d898;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--gris-bg);
+    color: var(--texto);
+    min-height: 100vh;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    background: var(--azul);
+    display: flex;
+    align-items: stretch;
+    border-bottom: 3px solid var(--rojo);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 24px;
+    border-right: 1px solid rgba(255,255,255,0.15);
+  }
+  .topbar-logo img {
+    height: 34px;
+    filter: brightness(0) invert(1);
+  }
+  .logo-fallback {
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    line-height: 1.3;
+  }
+  .topbar-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 10px 20px;
+  }
+  .topbar-eyebrow {
+    font-size: 9px;
+    color: rgba(255,255,255,0.55);
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    margin-bottom: 2px;
+  }
+  .topbar-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+  }
+  .topbar-nav {
+    display: flex;
+    align-items: stretch;
+  }
+  .topbar-nav a {
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    text-decoration: none;
+    border-left: 1px solid rgba(255,255,255,0.1);
+    transition: background .15s, color .15s;
+    cursor: pointer;
+  }
+  .topbar-nav a:hover, .topbar-nav a.active {
+    background: rgba(255,255,255,0.1);
+    color: white;
+  }
+  .topbar-nav a.active {
+    border-bottom: 3px solid var(--rojo);
+  }
+  .btn-nuevo {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 10px 16px;
+    padding: 7px 16px;
+    background: var(--rojo);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background .15s;
+    white-space: nowrap;
+  }
+  .btn-nuevo:hover { background: var(--rojo-hover); }
+
+  /* ── LAYOUT ── */
+  .layout {
+    display: flex;
+    min-height: calc(100vh - 60px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 220px;
+    background: var(--blanco);
+    border-right: 1px solid var(--gris-borde);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar-section {
+    padding: 16px 16px 8px;
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--texto-tenue);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    border-bottom: 1px solid var(--gris-borde);
+  }
+  .sidebar-section:first-child { padding-top: 20px; }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 16px;
+    font-size: 13px;
+    color: var(--texto-suave);
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: all .15s;
+  }
+  .sidebar-item:hover {
+    background: var(--azul-suave);
+    color: var(--azul);
+    border-left-color: var(--azul-medio);
+  }
+  .sidebar-item.active {
+    background: var(--azul-suave);
+    color: var(--azul);
+    border-left-color: var(--azul);
+    font-weight: 500;
+  }
+  .sidebar-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .sidebar-count {
+    margin-left: auto;
+    font-size: 10px;
+    background: var(--azul-claro);
+    color: var(--azul);
+    padding: 1px 7px;
+    border-radius: 8px;
+    font-weight: 500;
+  }
+  .sidebar-bottom {
+    margin-top: auto;
+    padding: 16px;
+    border-top: 1px solid var(--gris-borde);
+    font-size: 11px;
+    color: var(--texto-tenue);
+    line-height: 1.5;
+  }
+
+  /* ── MAIN ── */
+  .main {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── VIEWS ── */
+  .view { display: none; flex: 1; overflow-y: auto; }
+  .view.active { display: flex; flex-direction: column; }
+
+  /* ── VIEW: BOLETÍN ── */
+  .boletin-header {
+    background: var(--blanco);
+    border-bottom: 1px solid var(--gris-borde);
+    padding: 20px 28px 16px;
+    flex-shrink: 0;
+  }
+  .boletin-meta-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .boletin-eyebrow {
+    font-size: 10px;
+    color: var(--rojo);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .boletin-title {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--azul);
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+  .boletin-subtitle {
+    font-size: 12px;
+    color: var(--texto-suave);
+  }
+  .boletin-actions { display: flex; gap: 8px; }
+  .btn-sec {
+    padding: 7px 14px;
+    border: 1px solid var(--azul-medio);
+    border-radius: 5px;
+    background: var(--blanco);
+    color: var(--azul);
+    font-size: 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-sec:hover { background: var(--azul-suave); }
+  .btn-pri {
+    padding: 7px 14px;
+    border: none;
+    border-radius: 5px;
+    background: var(--azul);
+    color: white;
+    font-size: 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-pri:hover { background: var(--azul-hover); }
+
+  /* STATS BAR */
+  .stats-bar {
+    display: flex;
+    gap: 0;
+    background: var(--azul);
+    border-bottom: 1px solid var(--gris-borde);
+    flex-shrink: 0;
+  }
+  .stat-item {
+    flex: 1;
+    padding: 12px 16px;
+    border-right: 1px solid rgba(255,255,255,0.12);
+    text-align: center;
+  }
+  .stat-item:last-child { border-right: none; }
+  .stat-num {
+    font-size: 22px;
+    font-weight: 600;
+    color: white;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+  .stat-num.rojo { color: #ff8080; }
+  .stat-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.3;
+  }
+  .stat-sum {
+    flex: 2.5;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.6;
+    border-right: none;
+    border-left: 1px solid rgba(255,255,255,0.12);
+  }
+
+  /* ALERTA */
+  .alerta-strip {
+    background: #fff8e6;
+    border-bottom: 1px solid var(--naranja-borde);
+    padding: 10px 28px;
+    font-size: 12px;
+    color: var(--naranja);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .alerta-icon {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--rojo);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  /* FILTROS */
+  .filtros-bar {
+    padding: 10px 28px;
+    background: var(--blanco);
+    border-bottom: 1px solid var(--gris-borde);
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  .filtro-label { font-size: 11px; color: var(--texto-tenue); margin-right: 4px; }
+  .filtro-tag {
+    font-size: 11px;
+    padding: 4px 11px;
+    border-radius: 20px;
+    border: 1px solid var(--gris-borde);
+    background: var(--blanco);
+    color: var(--texto-suave);
+    cursor: pointer;
+    transition: all .15s;
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+  .filtro-tag:hover { border-color: var(--azul-medio); color: var(--azul); }
+  .filtro-tag.active {
+    background: var(--azul);
+    border-color: var(--azul);
+    color: white;
+  }
+
+  /* CASOS SCROLL AREA */
+  .casos-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* CASE CARD */
+  .case-card {
+    background: var(--blanco);
+    border: 1px solid var(--gris-borde);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .case-card:hover { border-color: var(--azul-medio); box-shadow: 0 2px 8px rgba(28,63,129,0.08); }
+  .case-card.open { border-color: var(--azul); box-shadow: 0 2px 12px rgba(28,63,129,0.12); }
+  .case-card.open .case-body { display: grid; }
+  .case-card.open .case-expand { display: none; }
+
+  .case-head {
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: 12px;
+    align-items: start;
+  }
+  .case-num-bubble {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--azul);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .case-titulo {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--azul);
+    margin-bottom: 3px;
+    line-height: 1.3;
+  }
+  .case-lugar {
+    font-size: 12px;
+    color: var(--texto-suave);
+    margin-bottom: 3px;
+  }
+  .case-ruc {
+    font-size: 11px;
+    color: var(--texto-tenue);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .case-tags { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .badge {
+    font-size: 10px;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: .02em;
+  }
+  .b-trafico { background: #e6edf8; color: #1C3F81; border: 1px solid #b0c2e0; }
+  .b-micro   { background: var(--verde-bg); color: var(--verde); border: 1px solid var(--verde-borde); }
+  .b-armas   { background: #fff3eb; color: #7a3010; border: 1px solid #f0c8a8; }
+  .b-robo    { background: var(--rojo-claro); color: #7a0a0a; border: 1px solid var(--rojo-borde); }
+  .b-morada  { background: var(--naranja-bg); color: var(--naranja); border: 1px solid var(--naranja-borde); }
+  .estado {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .e-preven  { background: var(--rojo-claro); color: var(--rojo); border: 1px solid var(--rojo-borde); }
+  .e-libre   { background: var(--verde-bg); color: var(--verde); border: 1px solid var(--verde-borde); }
+  .e-arraigo { background: var(--naranja-bg); color: var(--naranja); border: 1px solid var(--naranja-borde); }
+  .e-invest  { background: var(--azul-claro); color: var(--azul); border: 1px solid var(--azul-medio); }
+  .case-expand {
+    font-size: 10px;
+    color: var(--texto-tenue);
+    text-align: right;
+    margin-top: 4px;
+  }
+
+  /* CASE BODY */
+  .case-body {
+    display: none;
+    grid-template-columns: 1fr 280px;
+    border-top: 1px solid var(--azul-claro);
+  }
+  .case-main { padding: 18px 20px; }
+  .case-aside {
+    padding: 18px 16px;
+    background: var(--azul-suave);
+    border-left: 1px solid var(--azul-claro);
+  }
+  .sec-label {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--azul);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sec-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--azul-medio);
+  }
+  .relato-text {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-size: 14px;
+    color: var(--texto);
+    line-height: 1.75;
+    margin-bottom: 16px;
+  }
+  .incauta-box {
+    background: var(--azul-suave);
+    border-left: 3px solid var(--azul);
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: var(--texto-suave);
+    line-height: 1.6;
+  }
+  .incauta-box strong {
+    display: block;
+    font-size: 13px;
+    color: var(--azul);
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+
+  /* FOTOS GRID */
+  .foto-grid { display: grid; gap: 8px; margin-bottom: 16px; }
+  .foto-2col { grid-template-columns: 1fr 1fr; }
+  .foto-3col { grid-template-columns: 1fr 1fr 1fr; }
+  .foto-slot {
+    aspect-ratio: 4/3;
+    background: var(--azul-claro);
+    border: 1.5px dashed var(--azul-medio);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: background .15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .foto-slot:hover { background: var(--azul-medio); }
+  .foto-slot input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  }
+  .foto-ico {
+    width: 28px; height: 22px;
+    border-radius: 4px;
+    border: 2px solid var(--azul);
+    position: relative;
+  }
+  .foto-ico::before {
+    content: '';
+    position: absolute;
+    top: -6px; left: 6px;
+    width: 10px; height: 6px;
+    border-radius: 2px 2px 0 0;
+    border: 2px solid var(--azul);
+    border-bottom: none;
+  }
+  .foto-ico::after {
+    content: '';
+    position: absolute;
+    top: 4px; left: 6px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid var(--azul);
+  }
+  .foto-lbl { font-size: 10px; color: var(--azul); font-weight: 500; }
+  .foto-loaded { width: 100%; height: 100%; object-fit: cover; }
+
+  /* NOTICIAS */
+  .noticia-row {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--gris-borde);
+    font-size: 12px;
+    color: var(--texto-suave);
+    line-height: 1.5;
+  }
+  .noticia-row:last-child { border-bottom: none; }
+  .noticia-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--rojo); flex-shrink: 0; margin-top: 5px; }
+  .noticia-dot.vacio { background: var(--gris-borde); }
+  .noticia-link { color: var(--azul); text-decoration: underline; cursor: pointer; }
+
+  /* IMPUTADO CARD */
+  .imp-card {
+    background: var(--blanco);
+    border: 1px solid var(--azul-medio);
+    border-radius: 7px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .imp-header { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .imp-avatar {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--azul);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600;
+    flex-shrink: 0;
+  }
+  .imp-name { font-size: 13px; font-weight: 600; color: var(--azul); line-height: 1.3; }
+  .imp-rut { font-size: 10px; color: var(--texto-tenue); font-family: 'IBM Plex Mono', monospace; }
+  .imp-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .istat {
+    background: var(--azul-suave);
+    border-radius: 5px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  .istat-val { font-size: 16px; font-weight: 600; color: var(--azul); line-height: 1; }
+  .istat-val.alta { color: var(--rojo); }
+  .istat-lbl { font-size: 10px; color: var(--texto-tenue); margin-top: 2px; }
+
+  /* DILIGENCIAS */
+  .diligencias-box {
+    background: var(--blanco);
+    border-left: 2px solid var(--rojo);
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--texto-suave);
+    line-height: 1.6;
+    margin-bottom: 8px;
+    border-radius: 0 5px 5px 0;
+  }
+  .fiscal-txt {
+    font-size: 11px;
+    color: var(--texto-tenue);
+    margin-bottom: 12px;
+  }
+  .fiscal-txt strong { color: var(--azul); }
+
+  /* NOTAS */
+  .nota-ta {
+    width: 100%;
+    min-height: 64px;
+    padding: 8px 10px;
+    border: 1px solid var(--azul-medio);
+    border-radius: 5px;
+    background: var(--blanco);
+    color: var(--texto);
+    font-size: 12px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    resize: vertical;
+    line-height: 1.5;
+    transition: border-color .15s;
+  }
+  .nota-ta:focus { outline: none; border-color: var(--azul); }
+  .nota-ta::placeholder { color: var(--texto-tenue); }
+
+  /* CASE FOOTER */
+  .case-footer {
+    display: flex;
+    gap: 8px;
+    padding: 10px 20px;
+    border-top: 1px solid var(--azul-claro);
+    background: var(--azul-suave);
+    grid-column: 1 / -1;
+  }
+  .btn-fc {
+    padding: 5px 12px;
+    border: 1px solid var(--azul-medio);
+    border-radius: 5px;
+    background: var(--blanco);
+    color: var(--azul);
+    font-size: 11px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-fc:hover { background: var(--azul); color: white; border-color: var(--azul); }
+
+  /* ── VIEW: INGRESO ── */
+  .ingreso-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  .ingreso-form { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+  .form-card {
+    background: var(--blanco);
+    border: 1px solid var(--gris-borde);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .form-card-head {
+    background: var(--azul);
+    color: white;
+    padding: 10px 18px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .form-card-head span {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px;
+  }
+  .form-card-body { padding: 18px; }
+  .form-grid { display: grid; gap: 12px; }
+  .fg-2 { grid-template-columns: 1fr 1fr; }
+  .fg-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .fg-full { grid-column: 1 / -1; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--texto-tenue);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+  .field input, .field select, .field textarea {
+    padding: 8px 10px;
+    border: 1px solid var(--gris-borde);
+    border-radius: 5px;
+    font-size: 13px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--texto);
+    background: var(--blanco);
+    transition: border-color .15s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: var(--azul);
+  }
+  .field textarea { min-height: 72px; resize: vertical; line-height: 1.5; }
+  .field .hint { font-size: 10px; color: var(--texto-tenue); margin-top: 2px; }
+  .required::after { content: ' *'; color: var(--rojo); }
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    padding: 16px 18px;
+    border-top: 1px solid var(--gris-borde);
+    background: var(--gris-bg);
+  }
+
+  .ingreso-aside {
+    width: 260px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: sticky;
+    top: 20px;
+  }
+  .aside-card {
+    background: var(--blanco);
+    border: 1px solid var(--gris-borde);
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .aside-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--azul);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .aside-title::before {
+    content: '';
+    width: 3px; height: 12px;
+    background: var(--rojo);
+    border-radius: 2px;
+  }
+  .checklist { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+  .checklist li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--texto-suave);
+  }
+  .chk {
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    border: 1.5px solid var(--azul-medio);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .chk.done { background: var(--azul); border-color: var(--azul); }
+  .chk.done::after { content: '✓'; font-size: 9px; color: white; }
+  .campo-oblig {
+    font-size: 11px;
+    color: var(--texto-tenue);
+    line-height: 1.6;
+    padding: 8px;
+    background: var(--rojo-claro);
+    border-radius: 5px;
+    border-left: 2px solid var(--rojo);
+  }
+
+  /* ── VIEW: DASHBOARD ── */
+  .dash-scroll { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+  .dash-head { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 600; color: var(--azul); }
+  .dash-sub { font-size: 12px; color: var(--texto-tenue); margin-top: 3px; }
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .kpi {
+    background: var(--blanco);
+    border: 1px solid var(--gris-borde);
+    border-radius: 8px;
+    padding: 14px 16px;
+    border-top: 3px solid var(--azul);
+  }
+  .kpi.rojo { border-top-color: var(--rojo); }
+  .kpi.verde { border-top-color: var(--verde); }
+  .kpi-val { font-size: 28px; font-weight: 600; color: var(--azul); line-height: 1; margin-bottom: 4px; }
+  .kpi-val.rojo { color: var(--rojo); }
+  .kpi-lbl { font-size: 11px; color: var(--texto-tenue); line-height: 1.3; }
+  .dash-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .dash-card {
+    background: var(--blanco);
+    border: 1px solid var(--gris-borde);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .dash-card-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--azul);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--gris-borde);
+  }
+  .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .bar-lbl { font-size: 12px; color: var(--texto-suave); width: 100px; flex-shrink: 0; text-align: right; }
+  .bar-track { flex: 1; height: 8px; background: var(--azul-claro); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; background: var(--azul); transition: width .4s; }
+  .bar-fill.rojo { background: var(--rojo); }
+  .bar-count { font-size: 12px; color: var(--texto-tenue); width: 20px; text-align: right; }
+  .recent-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gris-borde);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .recent-row:last-child { border-bottom: none; }
+  .recent-row:hover { background: var(--azul-suave); margin: 0 -4px; padding-left: 4px; border-radius: 4px; }
+  .recent-num { width: 22px; height: 22px; border-radius: 50%; background: var(--azul); color: white; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .recent-info { flex: 1; }
+  .recent-delito { font-weight: 500; color: var(--texto); }
+  .recent-lugar { font-size: 11px; color: var(--texto-tenue); }
+  .recent-date { font-size: 11px; color: var(--texto-tenue); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--azul-medio); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--azul); }
+
+  /* MODAL OVERLAY */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,20,50,0.55);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--blanco);
+    border-radius: 10px;
+    width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-top: 4px solid var(--azul);
+  }
+  .modal-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--gris-borde);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-size: 15px; font-weight: 600; color: var(--azul); }
+  .modal-close {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--gris-borde);
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--texto-tenue);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-close:hover { background: var(--gris-bg); }
+  .modal-body { padding: 20px; }
+  .modal-footer {
+    padding: 14px 20px;
+    border-top: 1px solid var(--gris-borde);
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--azul);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 13px;
+    z-index: 300;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all .25s;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <img src="https://www.fiscaliadechile.cl/themes/fiscalia_theme/logo_fiscalia.svg"
+         alt="Fiscalía de Chile"
+         onerror="this.style.display='none'; document.getElementById('lgf').style.display='block'">
+    <div id="lgf" class="logo-fallback" style="display:none">FISCALÍA<br>DE CHILE</div>
+  </div>
+  <div class="topbar-info">
+    <div class="topbar-eyebrow">MINISTERIO PUBLICO · Región de Coquimbo</div>
+    <div class="topbar-title">Sistema de Gestión de Boletines</div>
+  </div>
+  <nav class="topbar-nav">
+    <a onclick="showView('dashboard')" id="nav-dashboard">Inicio</a>
+    <a onclick="showView('boletin')" id="nav-boletin" class="active">Boletín activo</a>
+    <a onclick="showView('historial')">Historial</a>
+    <a onclick="showView('configuracion')">Configuración</a>
+  </nav>
+  <button class="btn-nuevo" onclick="openModal()">+ Nuevo caso</button>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">Boletín N° 9 — May. 2025</div>
+    <div class="sidebar-item active" onclick="filterSidebar('todos', this)">
+      <div class="sidebar-dot" style="background:var(--azul)"></div>
+      Todos los casos
+      <span class="sidebar-count">9</span>
+    </div>
+    <div class="sidebar-item" onclick="filterSidebar('trafico', this)">
+      <div class="sidebar-dot" style="background:#1C3F81"></div>
+      Tráfico de drogas
+      <span class="sidebar-count">4</span>
+    </div>
+    <div class="sidebar-item" onclick="filterSidebar('micro', this)">
+      <div class="sidebar-dot" style="background:var(--verde)"></div>
+      Microtráfico
+      <span class="sidebar-count">2</span>
+    </div>
+    <div class="sidebar-item" onclick="filterSidebar('armas', this)">
+      <div class="sidebar-dot" style="background:#7a3010"></div>
+      Porte de armas
+      <span class="sidebar-count">2</span>
+    </div>
+    <div class="sidebar-item" onclick="filterSidebar('robo', this)">
+      <div class="sidebar-dot" style="background:var(--rojo)"></div>
+      Robo c/ violencia
+      <span class="sidebar-count">1</span>
+    </div>
+    <div class="sidebar-item" onclick="filterSidebar('morada', this)">
+      <div class="sidebar-dot" style="background:var(--naranja)"></div>
+      Violación de morada
+      <span class="sidebar-count">1</span>
+    </div>
+    <div class="sidebar-section">Acciones</div>
+    <div class="sidebar-item" onclick="showView('ingreso')">
+      <div class="sidebar-dot" style="background:var(--gris-borde)"></div>
+      Ingresar caso
+    </div>
+    <div class="sidebar-item">
+      <div class="sidebar-dot" style="background:var(--gris-borde)"></div>
+      Exportar .pptx
+    </div>
+    <div class="sidebar-item">
+      <div class="sidebar-dot" style="background:var(--gris-borde)"></div>
+      Exportar .pdf
+    </div>
+    <div class="sidebar-bottom">
+      <strong style="color:var(--azul)">Analista</strong><br>
+      Lissette Mujica Inaiman<br>
+      ECOH Elqui<br>
+      <span style="font-size:10px">Semana 23–29 may 2025</span>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <main class="main">
+
+    <!-- ── VIEW DASHBOARD ── -->
+    <div class="view" id="view-dashboard">
+      <div class="dash-scroll">
+        <div>
+          <div class="dash-head">Panel de control — Boletín N° 9</div>
+          <div class="dash-sub">Provincia del Elqui · Semana del 23 al 29 de mayo de 2025</div>
+        </div>
+        <div class="kpi-row">
+          <div class="kpi"><div class="kpi-val">9</div><div class="kpi-lbl">Casos semana</div></div>
+          <div class="kpi"><div class="kpi-val">6</div><div class="kpi-lbl">Tráfico / microtráfico</div></div>
+          <div class="kpi rojo"><div class="kpi-val rojo">2</div><div class="kpi-lbl">Prisión preventiva</div></div>
+          <div class="kpi"><div class="kpi-val">8</div><div class="kpi-lbl">Imputados registrados</div></div>
+          <div class="kpi verde"><div class="kpi-val" style="color:var(--verde)">3</div><div class="kpi-lbl">Noticias vinculadas</div></div>
+        </div>
+        <div class="dash-row">
+          <div class="dash-card">
+            <div class="dash-card-title">Delitos por categoría</div>
+            <div class="bar-row"><span class="bar-lbl">Tráfico</span><div class="bar-track"><div class="bar-fill" style="width:80%"></div></div><span class="bar-count">4</span></div>
+            <div class="bar-row"><span class="bar-lbl">Microtráfico</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><span class="bar-count">2</span></div>
+            <div class="bar-row"><span class="bar-lbl">Porte armas</span><div class="bar-track"><div class="bar-fill" style="width:50%"></div></div><span class="bar-count">2</span></div>
+            <div class="bar-row"><span class="bar-lbl">Robo c/ violencia</span><div class="bar-track"><div class="bar-fill rojo" style="width:25%"></div></div><span class="bar-count">1</span></div>
+            <div class="bar-row"><span class="bar-lbl">Viol. morada</span><div class="bar-track"><div class="bar-fill" style="width:25%;background:var(--naranja)"></div></div><span class="bar-count">1</span></div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title">Distribución geográfica</div>
+            <div class="bar-row"><span class="bar-lbl">La Serena</span><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span class="bar-count">7</span></div>
+            <div class="bar-row"><span class="bar-lbl">Coquimbo</span><div class="bar-track"><div class="bar-fill" style="width:43%"></div></div><span class="bar-count">3</span></div>
+            <div class="bar-row"><span class="bar-lbl">La Higuera</span><div class="bar-track"><div class="bar-fill" style="width:14%"></div></div><span class="bar-count">1</span></div>
+          </div>
+        </div>
+        <div class="dash-card" style="grid-column:1/-1">
+          <div class="dash-card-title">Casos recientes</div>
+          <div class="recent-row" onclick="showView('boletin')"><div class="recent-num">1</div><div class="recent-info"><div class="recent-delito">Microtráfico — 121 envoltorios pasta base</div><div class="recent-lugar">Brasil 715, La Serena (La Recova)</div></div><span class="badge b-micro" style="margin-right:8px">Microtráfico</span><div class="recent-date">23/05</div></div>
+          <div class="recent-row" onclick="showView('boletin')"><div class="recent-num">3</div><div class="recent-info"><div class="recent-delito">Tráfico — 935 g marihuana, 27 causas previas</div><div class="recent-lugar">El Brillador, Las Compañías, La Serena</div></div><span class="badge b-trafico" style="margin-right:8px">Tráfico</span><div class="recent-date">24/05</div></div>
+          <div class="recent-row" onclick="showView('boletin')"><div class="recent-num">7</div><div class="recent-info"><div class="recent-delito">Tráfico — Cultivo indoor, ~4.871 g marihuana</div><div class="recent-lugar">Aurora 3074, Las Compañías, La Serena</div></div><span class="badge b-trafico" style="margin-right:8px">Tráfico</span><div class="recent-date">28/05</div></div>
+          <div class="recent-row" onclick="showView('boletin')"><div class="recent-num">9</div><div class="recent-info"><div class="recent-delito">Robo con violencia — Guardia agredido y amarrado</div><div class="recent-lugar">Av. Salvador Allende esq. Talca Sur, Coquimbo</div></div><span class="badge b-robo" style="margin-right:8px">Robo c/v</span><div class="recent-date">29/05</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── VIEW BOLETÍN ── -->
+    <div class="view active" id="view-boletin">
+      <div class="boletin-header">
+        <div class="boletin-meta-row">
+          <div>
+            <div class="boletin-eyebrow">Reporte de Criminalidad N° 9 · Delitos de interés SAC-ECOH</div>
+            <div class="boletin-title">Provincia del Elqui — Semana del 23 al 29 de mayo de 2025</div>
+            <div class="boletin-subtitle">Fiscalía Región de Coquimbo · SAC </div>
+          </div>
+          <div class="boletin-actions">
+            <button class="btn-sec">Exportar .pptx</button>
+            <button class="btn-sec">Exportar .pdf</button>
+            <button class="btn-pri" onclick="showView('ingreso')">+ Ingresar caso</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-item"><div class="stat-num">9</div><div class="stat-label">Casos<br>semana</div></div>
+        <div class="stat-item"><div class="stat-num">6</div><div class="stat-label">Tráfico /<br>microtráfico</div></div>
+        <div class="stat-item"><div class="stat-num rojo">2</div><div class="stat-label">Prisión<br>preventiva</div></div>
+        <div class="stat-item"><div class="stat-num">8</div><div class="stat-label">Imputados<br>registrados</div></div>
+        <div class="stat-item"><div class="stat-num">3</div><div class="stat-label">Noticias<br>vinculadas</div></div>
+        <div class="stat-sum">Los casos se concentraron en la conurbación La Serena–Coquimbo. Predominan delitos de tráfico ilícito de drogas, porte de armas, robo con violencia y violación de morada. Se identifican dos imputados de alta reincidencia con red asociativa activa.</div>
+      </div>
+
+      <div class="alerta-strip">
+        <div class="alerta-icon">!</div>
+        <div><strong>Alerta reincidencia:</strong> Caso N°3 — 27 causas previas y 23 cómplices. Caso N°5 — más de 35 causas en 7 regiones del país. Revisar vinculación con SAC activos.</div>
+      </div>
+
+      <div class="filtros-bar">
+        <span class="filtro-label">Filtrar:</span>
+        <span class="filtro-tag active" onclick="filtrarBoletin('todos',this)">Todos (9)</span>
+        <span class="filtro-tag" onclick="filtrarBoletin('trafico',this)">Tráfico (4)</span>
+        <span class="filtro-tag" onclick="filtrarBoletin('micro',this)">Microtráfico (2)</span>
+        <span class="filtro-tag" onclick="filtrarBoletin('armas',this)">Porte armas (2)</span>
+        <span class="filtro-tag" onclick="filtrarBoletin('robo',this)">Robo c/ violencia (1)</span>
+        <span class="filtro-tag" onclick="filtrarBoletin('morada',this)">Violación morada (1)</span>
+      </div>
+
+      <div class="casos-scroll" id="casos-container">
+
+        <!-- CASO 1 -->
+        <div class="case-card" data-cat="micro" onclick="toggleCase(this)">
+          <div class="case-head">
+            <div class="case-num-bubble">1</div>
+            <div>
+              <div class="case-titulo">Microtráfico — Brasil 715, La Serena (Sector La Recova)</div>
+              <div class="case-lugar">23 de mayo de 2025 · 3ra Comisaría La Serena · Patrullaje preventivo</div>
+              <div class="case-ruc">RUC 2500712796-3</div>
+            </div>
+            <div class="case-tags">
+              <span class="badge b-micro">Microtráfico</span>
+              <span class="estado e-libre">En libertad</span>
+              <div class="case-expand">↓ expandir</div>
+            </div>
+          </div>
+          <div class="case-body">
+            <div class="case-main">
+              <div class="sec-label">Relato del hecho</div>
+              <div class="relato-text">Personal de carabineros de la 3ra Comisaría realizó patrullaje preventivo en un punto conocido de transacción de drogas en el sector La Recova. Al acercarse a tres individuos, uno de ellos emprendió la huida, siendo detenido a pocos metros. Al ser registrado, se le incautaron 121 envoltorios de pasta base de cocaína.</div>
+              <div class="sec-label">Especies incautadas</div>
+              <div class="incauta-box"><strong>121 envoltorios de pasta base de cocaína</strong>Peso total: 37,39 g · N.U.E. por confirmar</div>
+              <div class="sec-label">Fotografías del procedimiento</div>
+              <div class="foto-grid foto-2col">
+                <div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Fotografía SS</div></div>
+                <div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Incautación</div></div>
+              </div>
+              <div class="sec-label">Prensa vinculada</div>
+              <div class="noticia-row"><div class="noticia-dot"></div><div><span class="noticia-link">El Día · 23 mayo 2025</span> — Carabineros detiene sujeto con más de cien envoltorios de pasta base en La Recova de La Serena.</div></div>
+              <div class="noticia-row"><div class="noticia-dot vacio"></div><div style="color:var(--texto-tenue);font-size:12px;cursor:pointer">+ Agregar enlace de prensa</div></div>
+            </div>
+            <div class="case-aside">
+              <div class="sec-label">Imputado</div>
+              <div class="imp-card">
+                <div class="imp-header"><div class="imp-avatar">MV</div><div><div class="imp-name">Matías Ignacio Valero Tello</div><div class="imp-rut">19.348.260-0 · CHL · 29 años</div></div></div>
+                <div class="imp-stats"><div class="istat"><div class="istat-val">6</div><div class="istat-lbl">Causas previas</div></div><div class="istat"><div class="istat-val">1</div><div class="istat-lbl">Cómplice registrado</div></div></div>
+              </div>
+              <div class="sec-label" style="margin-top:12px">Diligencias</div>
+              <div class="diligencias-box">Orden de investigar — 90 días en libertad</div>
+              <div class="fiscal-txt">Fiscal a cargo: <strong>Andrés Gálvez</strong></div>
+              <div class="sec-label">Notas del analista</div>
+              <textarea class="nota-ta" placeholder="Observaciones, alertas, contexto relevante..."></textarea>
+            </div>
+            <div class="case-footer">
+              <button class="btn-fc" onclick="event.stopPropagation()">Editar caso</button>
+              <button class="btn-fc" onclick="event.stopPropagation()">Red asociativa</button>
+              <button class="btn-fc" onclick="event.stopPropagation()">Historial imputado</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- CASO 2 -->
+        <div class="case-card" data-cat="armas" onclick="toggleCase(this)">
+          <div class="case-head">
+            <div class="case-num-bubble">2</div>
+            <div>
+              <div class="case-titulo">Porte de armas — Adelaida Cathalifaud de Meléndez, Regimiento Arica, Coquimbo</div>
+              <div class="case-lugar">23 de mayo de 2025 · Control de identidad preventivo</div>
+              <div class="case-ruc">RUC 2500706323-K</div>
+            </div>
+            <div class="case-tags"><span class="badge b-armas">Porte de armas</span><span class="estado e-libre">En libertad</span><div class="case-expand">↓ expandir</div></div>
+          </div>
+          <div class="case-body">
+            <div class="case-main">
+              <div class="sec-label">Relato del hecho</div>
+              <div class="relato-text">Carabineros realizó control de identidad preventivo aproximándose a dos sujetos. Uno de ellos huyó y fue detenido a pocos metros. Al ser registrado, se le incautó un arma de fuego tipo revólver calibre .38 corto, marca Smith & Wesson, sin número de serie visible.</div>
+              <div class="sec-label">Evidencia incautada</div>
+              <div class="incauta-box"><strong>Revólver Smith & Wesson calibre .38 corto · N.U.E. 7974085</strong>Capacidad 6 cartuchos · Sin número de serie visible · No modificada</div>
+              <div class="foto-grid foto-2col">
+                <div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Arma incautada</div></div>
+                <div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Fotografía SS</div></div>
+              </div>
+              <div class="noticia-row"><div class="noticia-dot vacio"></div><div style="color:var(--texto-tenue);font-size:12px;cursor:pointer">+ Agregar enlace de prensa</div></div>
+            </div>
+            <div class="case-aside">
+              <div class="sec-label">Imputado</div>
+              <div class="imp-card">
+                <div class="imp-header"><div class="imp-avatar" style="background:#2a5a9a">WZ</div><div><div class="imp-name">Wilson Andrés Zapata Cardona</div><div class="imp-rut">DNI 1.007.054.493 · COL · 21 años</div></div></div>
+                <div class="imp-stats"><div class="istat"><div class="istat-val">3</div><div class="istat-lbl">Denuncias como víctima</div></div><div class="istat"><div class="istat-val">0</div><div class="istat-lbl">Cómplices</div></div></div>
+              </div>
+              <div class="sec-label" style="margin-top:12px">Diligencias</div>
+              <div class="diligencias-box">Imputado queda en libertad. Figura con dos identificaciones en SAF: DNI colombiano y RUT chileno 28870426-0.</div>
+              <div class="fiscal-txt">Fiscal a cargo: <strong>Mauricio Cartes</strong></div>
+              <div class="sec-label">Notas del analista</div>
+              <textarea class="nota-ta" placeholder="Observaciones..."></textarea>
+            </div>
+            <div class="case-footer"><button class="btn-fc" onclick="event.stopPropagation()">Editar caso</button><button class="btn-fc" onclick="event.stopPropagation()">Historial imputado</button></div>
+          </div>
+        </div>
+
+        <!-- CASO 3 -->
+        <div class="case-card" data-cat="trafico" onclick="toggleCase(this)">
+          <div class="case-head">
+            <div class="case-num-bubble">3</div>
+            <div>
+              <div class="case-titulo">Tráfico ilícito de drogas — El Brillador, Las Compañías, La Serena</div>
+              <div class="case-lugar">24 de mayo de 2025 · Control vehicular</div>
+              <div class="case-ruc">RUC 2500713686-5</div>
+            </div>
+            <div class="case-tags"><span class="badge b-trafico">Tráfico</span><span class="estado e-preven">Prisión preventiva</span><div class="case-expand">↓ expandir</div></div>
+          </div>
+          <div class="case-body">
+            <div class="case-main">
+              <div class="sec-label">Relato del hecho</div>
+              <div class="relato-text">Durante un control vehicular, carabineros detectó fuerte olor a marihuana. Al revisar el vehículo, se incautaron tres bolsas de nylon con marihuana a granel, junto a balanza de precisión, molinillo y teléfonos celulares como indicios de distribución.</div>
+              <div class="sec-label">Especies incautadas</div>
+              <div class="incauta-box"><strong>935 gramos de marihuana a granel — 3 bolsas de nylon</strong>Balanza de precisión · molinillo · celulares (indicios de distribución)</div>
+              <div class="foto-grid foto-2col">
+                <div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Evidencia</div></div>
+                <div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Fotografía SS</div></div>
+              </div>
+              <div class="noticia-row"><div class="noticia-dot"></div><div><span class="noticia-link">El Día · 24 mayo 2025</span> — Decomisan casi un kilo de marihuana a sujeto con 27 causas penales en Las Compañías.</div></div>
+            </div>
+            <div class="case-aside">
+              <div class="sec-label">Imputado</div>
+              <div class="imp-card">
+                <div class="imp-header"><div class="imp-avatar">CG</div><div><div class="imp-name">Carlo Francisco González González</div><div class="imp-rut">19.177.125-7 · CHL · 29 años</div></div></div>
+                <div class="imp-stats"><div class="istat"><div class="istat-val alta">27</div><div class="istat-lbl">Causas previas</div></div><div class="istat"><div class="istat-val alta">23</div><div class="istat-lbl">Cómplices</div></div></div>
+              </div>
+              <div class="sec-label" style="margin-top:12px">Diligencias</div>
+              <div class="diligencias-box">Prisión preventiva — 60 días de investigación</div>
+              <div class="fiscal-txt">Fiscal a cargo: <strong>Andrés Gálvez</strong></div>
+              <div class="sec-label">Notas del analista</div>
+              <textarea class="nota-ta">Reincidente: tráfico, microtráfico, robo en lugar habitado. Alta prioridad SAC — revisar red asociativa activa.</textarea>
+            </div>
+            <div class="case-footer"><button class="btn-fc" onclick="event.stopPropagation()">Editar caso</button><button class="btn-fc" onclick="event.stopPropagation()">Red asociativa</button><button class="btn-fc" onclick="event.stopPropagation()">Historial imputado</button></div>
+          </div>
+        </div>
+
+        <!-- CASOS 4-9 condensados -->
+        <div class="case-card" data-cat="armas" onclick="toggleCase(this)">
+          <div class="case-head"><div class="case-num-bubble">4</div><div><div class="case-titulo">Porte armas, microtráfico y conducción en ebriedad — Villa La Florida, La Serena</div><div class="case-lugar">25 de mayo de 2025 · Huida vehicular con volcamiento · RUC 2500715436-7</div></div><div class="case-tags"><span class="badge b-armas">Porte armas</span><span class="estado e-arraigo">Arraigo nacional</span><div class="case-expand">↓ expandir</div></div></div>
+          <div class="case-body"><div class="case-main"><div class="sec-label">Relato del hecho</div><div class="relato-text">Al intentar carabineros fiscalizar a un conductor, este se dio a la fuga. El vehículo volcó causando daños en un inmueble. Detenido el sujeto, se encontró pistola lanza balines no modificada, cuchilla y 25 envoltorios de pasta base.</div><div class="incauta-box"><strong>Pistola lanza balines (no modificada) · 25 envoltorios pasta base · 1 cuchilla</strong>Peso droga: ≈5,60 g · Vehículo con daños estructurales</div><div class="foto-grid foto-3col"><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Vehículo</div></div><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Arma</div></div><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Droga</div></div></div></div><div class="case-aside"><div class="sec-label">Imputado</div><div class="imp-card"><div class="imp-header"><div class="imp-avatar" style="background:#8a9ab8">?</div><div><div class="imp-name">Sin RUT confirmado en SRCeI</div><div class="imp-rut">RUT 21806762-K</div></div></div><div class="imp-stats"><div class="istat"><div class="istat-val">2</div><div class="istat-lbl">Causas previas</div></div><div class="istat"><div class="istat-val">0</div><div class="istat-lbl">Cómplices</div></div></div></div><div class="diligencias-box" style="margin-top:12px">Arraigo nacional · firma mensual · suspensión licencia · 90 días invest.</div><div class="fiscal-txt">Fiscal: <strong>Andrés Gálvez</strong></div><textarea class="nota-ta" placeholder="Observaciones..."></textarea></div><div class="case-footer"><button class="btn-fc" onclick="event.stopPropagation()">Editar</button><button class="btn-fc" onclick="event.stopPropagation()">Verificar SRCeI</button></div></div>
+        </div>
+
+        <div class="case-card" data-cat="trafico" onclick="toggleCase(this)">
+          <div class="case-head"><div class="case-num-bubble">5</div><div><div class="case-titulo">Tráfico ilícito de drogas — Brasil 715 costado Unimarc, La Recova, La Serena</div><div class="case-lugar">27 de mayo de 2025 · Control preventivo · mismo punto caso N°1 · RUC 2500730672-8</div></div><div class="case-tags"><span class="badge b-trafico">Tráfico</span><span class="estado e-arraigo">Arraigo nacional</span><div class="case-expand">↓ expandir</div></div></div>
+          <div class="case-body"><div class="case-main"><div class="sec-label">Relato del hecho</div><div class="relato-text">Carabineros realizó control preventivo en el sector del Unimarc de La Recova. Al controlar a una mujer, se le incautaron 72 envoltorios de pasta base. Nótese que el hecho ocurre en el mismo punto que el caso N°1 de esta semana, sugiriendo un punto de venta activo.</div><div class="incauta-box"><strong>72 envoltorios de pasta base</strong>Peso total: 23 g</div><div class="foto-grid foto-2col"><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Evidencia</div></div><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Sector</div></div></div></div><div class="case-aside"><div class="sec-label">Imputada</div><div class="imp-card"><div class="imp-header"><div class="imp-avatar">JA</div><div><div class="imp-name">Juana Luisa Arancibia Díaz</div><div class="imp-rut">16.307.184-3 · CHL · 39 años</div></div></div><div class="imp-stats"><div class="istat"><div class="istat-val alta">+35</div><div class="istat-lbl">Causas previas</div></div><div class="istat"><div class="istat-val">12</div><div class="istat-lbl">Cómplices</div></div></div></div><div class="diligencias-box" style="margin-top:12px">Firma mensual · arraigo nacional · 90 días de investigación</div><div class="fiscal-txt">Fiscal: <strong>Andrés Gálvez</strong></div><textarea class="nota-ta">Perfil interregional: causas en Antofagasta, Calama, Copiapó, Coquimbo, Iquique, La Serena y Ovalle.</textarea></div><div class="case-footer"><button class="btn-fc" onclick="event.stopPropagation()">Editar</button><button class="btn-fc" onclick="event.stopPropagation()">Red asociativa</button></div></div>
+        </div>
+
+        <div class="case-card" data-cat="morada" onclick="toggleCase(this)">
+          <div class="case-head"><div class="case-num-bubble">6</div><div><div class="case-titulo">Violación de morada — San Blas-Canillejas Calle Seis, Coquimbo</div><div class="case-lugar">27 de mayo de 2025 · Local comercial "Carnicería La Veguita" · RUC 2500723075-6</div></div><div class="case-tags"><span class="badge b-morada">Viol. morada</span><span class="estado e-libre">En libertad</span><div class="case-expand">↓ expandir</div></div></div>
+          <div class="case-body"><div class="case-main"><div class="sec-label">Relato del hecho</div><div class="relato-text">Carabineros sorprendió a un sujeto forzando la reja del local comercial "Carnicería La Veguita". Al ser registrado, se le incautó un arma de fogueo tipo pistola portada en banano.</div><div class="incauta-box"><strong>Arma tipo pistola de fogueo</strong>Portada en banano al momento de la detención.</div><div class="foto-grid foto-2col"><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Local comercial</div></div><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Arma de fogueo</div></div></div><div class="noticia-row"><div class="noticia-dot"></div><div><span class="noticia-link">Coquimbo en Red · 27 mayo</span> — Sorprenden a sujeto forzando carnicería en San Blas portando arma de fogueo.</div></div></div><div class="case-aside"><div class="sec-label">Imputado</div><div class="imp-card"><div class="imp-header"><div class="imp-avatar" style="background:#4a6a9a">CT</div><div><div class="imp-name">Cristian Alberto Trujillo Rivera</div><div class="imp-rut">12.576.554-8 · CHL · 51 años</div></div></div><div class="imp-stats"><div class="istat"><div class="istat-val">14</div><div class="istat-lbl">Causas previas</div></div><div class="istat"><div class="istat-val">5</div><div class="istat-lbl">Cómplices</div></div></div></div><div class="diligencias-box" style="margin-top:12px">En libertad — 60 días de investigación</div><div class="fiscal-txt">Fiscal: <strong>Claudio Sobarzo</strong></div><textarea class="nota-ta" placeholder="Observaciones..."></textarea></div><div class="case-footer"><button class="btn-fc" onclick="event.stopPropagation()">Editar</button><button class="btn-fc" onclick="event.stopPropagation()">Historial imputado</button></div></div>
+        </div>
+
+        <div class="case-card" data-cat="trafico" onclick="toggleCase(this)">
+          <div class="case-head"><div class="case-num-bubble">7</div><div><div class="case-titulo">Tráfico ilícito de drogas / cultivo indoor — Aurora 3074, Las Compañías, La Serena</div><div class="case-lugar">28 de mayo de 2025 · Denuncia anónima vía Denuncia Seguro · RUC 2500170574-4</div></div><div class="case-tags"><span class="badge b-trafico">Tráfico</span><span class="estado e-preven">Prisión preventiva</span><div class="case-expand">↓ expandir</div></div></div>
+          <div class="case-body"><div class="case-main"><div class="sec-label">Relato del hecho</div><div class="relato-text">Tras denuncia anónima al sistema Denuncia Seguro, la fiscalía instruyó entrada y registro del inmueble. Se descubrió sistema de cultivo indoor activo y marihuana a granel en múltiples bolsas y cajas, con total cercano a 5 kilogramos.</div><div class="incauta-box"><strong>Total aprox. 4.871 g marihuana a granel</strong>28 bolsas negras (2.412 g) · 1 caja (363 g) · 4 bolsas negras (1.533 g) · 1 bolsa verde (563 g) · Sistema cultivo indoor</div><div class="foto-grid foto-3col"><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Cultivo</div></div><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Bolsas</div></div><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Evidencia</div></div></div></div><div class="case-aside"><div class="sec-label">Imputado</div><div class="imp-card"><div class="imp-header"><div class="imp-avatar" style="background:#2a6a4a">HZ</div><div><div class="imp-name">Hernán Alejandro Zambrano Zambrano</div><div class="imp-rut">16.527.308-7 · CHL · 37 años</div></div></div><div class="imp-stats"><div class="istat"><div class="istat-val">5</div><div class="istat-lbl">Causas previas</div></div><div class="istat"><div class="istat-val">0</div><div class="istat-lbl">Cómplices</div></div></div></div><div class="diligencias-box" style="margin-top:12px">Prisión preventiva — 30 días de investigación</div><div class="fiscal-txt">Fiscal: <strong>Andrés Gálvez</strong></div><textarea class="nota-ta" placeholder="Observaciones..."></textarea></div><div class="case-footer"><button class="btn-fc" onclick="event.stopPropagation()">Editar</button><button class="btn-fc" onclick="event.stopPropagation()">Historial imputado</button></div></div>
+        </div>
+
+        <div class="case-card" data-cat="micro" onclick="toggleCase(this)">
+          <div class="case-head"><div class="case-num-bubble">8</div><div><div class="case-titulo">Microtráfico — Ruta D-110 Trapiche, La Higuera</div><div class="case-lugar">28 de mayo de 2025 · Orden de investigar · registro de inmueble · RUC 2500765029-1</div></div><div class="case-tags"><span class="badge b-micro">Microtráfico</span><span class="estado e-invest">Sin info FCD</span><div class="case-expand">↓ expandir</div></div></div>
+          <div class="case-body"><div class="case-main"><div class="sec-label">Relato del hecho</div><div class="relato-text">En virtud de una orden de investigar del fiscal Gálvez, se registró inmueble en La Higuera encontrando marihuana a granel en dos muestras separadas.</div><div class="incauta-box"><strong>201,1 g de marihuana a granel</strong>Muestra 1: 103,6 g · Muestra 2: 97,5 g</div><div class="foto-grid foto-2col"><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Fotografía SS</div></div><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Evidencia</div></div></div></div><div class="case-aside"><div class="sec-label">Imputado</div><div class="imp-card"><div class="imp-header"><div class="imp-avatar" style="background:#5a7aaa">FP</div><div><div class="imp-name">Francisco Javier Pérez Díaz</div><div class="imp-rut">13.483.119-7 · CHL · 46 años</div></div></div><div class="imp-stats"><div class="istat"><div class="istat-val alta">+30</div><div class="istat-lbl">Causas previas</div></div><div class="istat"><div class="istat-val">3</div><div class="istat-lbl">Cómplices</div></div></div></div><div class="diligencias-box" style="margin-top:12px">Sin información en FCD y RIT al cierre del reporte</div><div class="fiscal-txt">Fiscal: <strong>Andrés Gálvez</strong></div><textarea class="nota-ta">Alta movilidad geográfica: causas en Antofagasta, Castro, Coquimbo, Quellón, Vallenar, Puerto Montt, Pucón, Puerto Natales, La Florida, Quinchao y La Serena.</textarea></div><div class="case-footer"><button class="btn-fc" onclick="event.stopPropagation()">Editar</button><button class="btn-fc" onclick="event.stopPropagation()">Historial imputado</button></div></div>
+        </div>
+
+        <div class="case-card" data-cat="robo" onclick="toggleCase(this)">
+          <div class="case-head"><div class="case-num-bubble">9</div><div><div class="case-titulo">Robo con violencia — Av. Salvador Allende esq. calle Talca Sur, Coquimbo</div><div class="case-lugar">29 de mayo de 2025 · Constructora · guardia agredido y amarrado · RUC 2500750564-K</div></div><div class="case-tags"><span class="badge b-robo">Robo c/ violencia</span><span class="estado e-invest">En investigación</span><div class="case-expand">↓ expandir</div></div></div>
+          <div class="case-body"><div class="case-main"><div class="sec-label">Relato del hecho</div><div class="relato-text">Cuatro sujetos de negro ingresaron a una constructora. El guardia se ocultó en una garita, fue descubierto, golpeado en la cabeza con una pistola y dejado amarrado. Sustrajeron una camioneta y herramientas. La camioneta fue recuperada en sector San Juan gracias a su GPS.</div><div class="incauta-box"><strong>1 camioneta (recuperada vía GPS) + herramientas de construcción</strong>4 imputados no identificados · vestimenta oscura</div><div class="foto-grid foto-2col"><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Camioneta recuperada</div></div><div class="foto-slot"><input type="file" accept="image/*" onchange="cargarFoto(this)"><div class="foto-ico"></div><div class="foto-lbl">Fotografía SS</div></div></div></div><div class="case-aside"><div class="sec-label">Víctima</div><div class="imp-card"><div class="imp-header"><div class="imp-avatar">MC</div><div><div class="imp-name">Matías Nicolás Cisternas Salazar</div><div class="imp-rut">18.011.242-1 · Guardia de seguridad</div></div></div></div><div class="sec-label">Imputados</div><div style="font-size:12px;color:var(--texto-suave);padding:8px 10px;background:var(--blanco);border-radius:5px;border:1px solid var(--gris-borde);margin-bottom:10px;line-height:1.5">4 sujetos no identificados. Investigación en curso.</div><div class="diligencias-box">SIP de Carabineros instruido a investigar en 30 días</div><div class="fiscal-txt">Fiscal: <strong>Claudio Correa</strong></div><textarea class="nota-ta" placeholder="Observaciones..."></textarea></div><div class="case-footer"><button class="btn-fc" onclick="event.stopPropagation()">Editar</button><button class="btn-fc" onclick="event.stopPropagation()">Registrar imputados</button></div></div>
+        </div>
+
+      </div><!-- /casos-scroll -->
+    </div><!-- /view-boletin -->
+
+    <!-- ── VIEW INGRESO ── -->
+    <div class="view" id="view-ingreso">
+      <div class="ingreso-wrap">
+        <div class="ingreso-form">
+
+          <div class="form-card">
+            <div class="form-card-head"><span>1</span>Identificación del caso</div>
+            <div class="form-card-body">
+              <div class="form-grid fg-3">
+                <div class="field"><label class="required">Fecha del hecho</label><input type="date"></div>
+                <div class="field"><label class="required">RUC</label><input type="text" placeholder="2500XXXXXX-X"><div class="hint">Número único de causa judicial</div></div>
+                <div class="field"><label>Folio bitácora web</label><input type="text" placeholder="FBW-2025-XXX"></div>
+                <div class="field fg-full"><label class="required">Tipo de delito principal</label>
+                  <select>
+                    <option value="">Seleccionar...</option>
+                    <option>Tráfico ilícito de drogas</option>
+                    <option>Microtráfico</option>
+                    <option>Porte / tenencia ilegal de armas</option>
+                    <option>Robo con violencia</option>
+                    <option>Robo con intimidación</option>
+                    <option>Robo en lugar habitado</option>
+                    <option>Robo en lugar no habitado</option>
+                    <option>Violación de morada</option>
+                    <option>Hurto simple</option>
+                    <option>Lesiones</option>
+                    <option>VIF</option>
+                    <option>Homicidio</option>
+                    <option>Otro</option>
+                  </select>
+                </div>
+                <div class="field"><label>Delito secundario</label><input type="text" placeholder="Ej: Conducción en ebriedad"></div>
+                <div class="field"><label>N° de boletín</label><input type="number" value="9"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-head"><span>2</span>Lugar del hecho</div>
+            <div class="form-card-body">
+              <div class="form-grid fg-2">
+                <div class="field fg-full"><label class="required">Dirección completa</label><input type="text" placeholder="Calle, número, sector o referencia"></div>
+                <div class="field"><label class="required">Comuna</label>
+                  <select>
+                    <option>La Serena</option>
+                    <option>Coquimbo</option>
+                    <option>Andacollo</option>
+                    <option>La Higuera</option>
+                    <option>Paiguano</option>
+                    <option>Vicuña</option>
+                  </select>
+                </div>
+                <div class="field"><label>Sector / barrio</label><input type="text" placeholder="Ej: Las Compañías, La Recova"></div>
+                <div class="field"><label>Tipo de lugar</label>
+                  <select>
+                    <option>Vía pública</option>
+                    <option>Inmueble residencial</option>
+                    <option>Local comercial</option>
+                    <option>Vehículo</option>
+                    <option>Establecimiento educacional</option>
+                    <option>Otro</option>
+                  </select>
+                </div>
+                <div class="field"><label>Unidad policial</label><input type="text" placeholder="Ej: 3ra Comisaría La Serena"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-head"><span>3</span>Relato e incautación</div>
+            <div class="form-card-body">
+              <div class="form-grid">
+                <div class="field fg-full"><label class="required">Relato breve del hecho</label><textarea placeholder="Descripción resumida del procedimiento, circunstancias y hallazgos..." style="min-height:90px"></textarea></div>
+                <div class="field fg-full"><label>Especies incautadas / robadas</label><textarea placeholder="Ej: 121 envoltorios pasta base (37,39 g) · N.U.E. XXXX" style="min-height:60px"></textarea></div>
+                <div class="field"><label>Tipo de droga</label>
+                  <select>
+                    <option value="">N/A</option>
+                    <option>Pasta base de cocaína</option>
+                    <option>Clorhidrato de cocaína</option>
+                    <option>Marihuana</option>
+                    <option>Éxtasis / MDMA</option>
+                    <option>Heroína</option>
+                    <option>Metanfetamina</option>
+                    <option>Múltiples / otro</option>
+                  </select>
+                </div>
+                <div class="field"><label>Peso total (gramos)</label><input type="number" step="0.01" placeholder="0.00"></div>
+                <div class="field"><label>N.U.E. (Número único evidencia)</label><input type="text" placeholder="XXXXXXX"></div>
+                <div class="field"><label>Tipo de arma incautada</label>
+                  <select>
+                    <option value="">N/A</option>
+                    <option>Arma de fuego real</option>
+                    <option>Arma de fuego de fogueo</option>
+                    <option>Arma de fuego de aire comprimido</option>
+                    <option>Arma blanca</option>
+                    <option>Otro</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-head"><span>4</span>Vehículo(s) involucrado(s)</div>
+            <div class="form-card-body">
+              <div class="form-grid fg-3">
+                <div class="field"><label>Patente</label><input type="text" placeholder="XXXX-XX"></div>
+                <div class="field"><label>Marca / modelo</label><input type="text" placeholder="Ej: Toyota Hilux"></div>
+                <div class="field"><label>Estado</label>
+                  <select>
+                    <option value="">N/A</option>
+                    <option>Incautado</option>
+                    <option>Recuperado</option>
+                    <option>Robado / en búsqueda</option>
+                    <option>Involucrado en huida</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-head"><span>5</span>Imputado(s)</div>
+            <div class="form-card-body">
+              <div class="form-grid fg-2">
+                <div class="field"><label>Apellido paterno</label><input type="text"></div>
+                <div class="field"><label>Apellido materno</label><input type="text"></div>
+                <div class="field"><label>Nombres</label><input type="text"></div>
+                <div class="field"><label>RUT / DNI</label><input type="text" placeholder="00.000.000-0"></div>
+                <div class="field"><label>Fecha de nacimiento</label><input type="date"></div>
+                <div class="field"><label>Nacionalidad</label><input type="text" placeholder="CHL / COL / PER..."></div>
+                <div class="field"><label>Sexo</label><select><option>Masculino</option><option>Femenino</option></select></div>
+                <div class="field"><label>N° causas previas (SAF)</label><input type="number" placeholder="0"></div>
+                <div class="field"><label>N° compañeros de delito</label><input type="number" placeholder="0"></div>
+                <div class="field"><label>Ubicación / extranjería</label><input type="text" placeholder="Sin movimientos fuera del país..."></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-head"><span>6</span>Víctima(s)</div>
+            <div class="form-card-body">
+              <div class="form-grid fg-2">
+                <div class="field"><label>Nombre completo</label><input type="text" placeholder="Opcional si no aplica"></div>
+                <div class="field"><label>RUT víctima</label><input type="text" placeholder="00.000.000-0"></div>
+                <div class="field"><label>Calidad</label><select><option>N/A</option><option>Persona natural</option><option>Empresa / institución</option><option>Funcionario público</option></select></div>
+                <div class="field"><label>Lesiones</label><select><option>Sin lesiones</option><option>Lesiones leves</option><option>Lesiones graves</option><option>Lesiones gravísimas</option><option>Fallecido</option></select></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-head"><span>7</span>Estado de la causa y diligencias</div>
+            <div class="form-card-body">
+              <div class="form-grid fg-2">
+                <div class="field"><label class="required">Estado</label>
+                  <select>
+                    <option>En libertad — orden de investigar</option>
+                    <option>Prisión preventiva</option>
+                    <option>Arraigo nacional</option>
+                    <option>Arraigo nacional + firma mensual</option>
+                    <option>Suspensión de licencia</option>
+                    <option>Sin información FCD/RIT</option>
+                    <option>Imputado no identificado</option>
+                  </select>
+                </div>
+                <div class="field"><label>Plazo investigación (días)</label><input type="number" placeholder="30 / 60 / 90"></div>
+                <div class="field"><label class="required">Fiscal a cargo</label>
+                  <select>
+                    <option>Andrés Gálvez</option>
+                    <option>Claudio Sobarzo</option>
+                    <option>Claudio Correa</option>
+                    <option>Mauricio Cartes</option>
+                    <option>Otro</option>
+                  </select>
+                </div>
+                <div class="field"><label>Unidad investigadora</label><input type="text" placeholder="SIP, PDI, BIRO..."></div>
+                <div class="field fg-full"><label>Descripción completa de diligencias</label><textarea placeholder="Detalle de medidas cautelares, instrucciones al ente policial, etc." style="min-height:64px"></textarea></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-card">
+            <div class="form-card-head"><span>8</span>Prensa y observaciones</div>
+            <div class="form-card-body">
+              <div class="form-grid">
+                <div class="field"><label>URL noticia 1</label><input type="url" placeholder="https://..."></div>
+                <div class="field"><label>URL noticia 2</label><input type="url" placeholder="https://..."></div>
+                <div class="field fg-full"><label>Observaciones del analista</label><textarea placeholder="Antecedentes adicionales, alerta de reincidencia, vínculos con otras causas..." style="min-height:72px"></textarea></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn-pri" onclick="guardarCaso()">Guardar caso</button>
+            <button class="btn-sec">Guardar borrador</button>
+            <button class="btn-sec" style="margin-left:auto;color:var(--rojo);border-color:var(--rojo-borde)" onclick="showView('boletin')">Cancelar</button>
+          </div>
+        </div>
+
+        <!-- ASIDE DEL FORMULARIO -->
+        <div class="ingreso-aside">
+          <div class="aside-card">
+            <div class="aside-title">Campos obligatorios</div>
+            <div class="campo-oblig">Los campos marcados con <strong>*</strong> son mínimos requeridos para guardar el caso. Los demás pueden completarse posteriormente.</div>
+          </div>
+          <div class="aside-card">
+            <div class="aside-title">Lista de verificación</div>
+            <ul class="checklist">
+              <li><div class="chk done"></div>Fecha del hecho</li>
+              <li><div class="chk done"></div>RUC ingresado</li>
+              <li><div class="chk"></div>Tipo de delito</li>
+              <li><div class="chk"></div>Lugar completo</li>
+              <li><div class="chk"></div>Relato del hecho</li>
+              <li><div class="chk"></div>Datos imputado</li>
+              <li><div class="chk"></div>Estado causa</li>
+              <li><div class="chk"></div>Fiscal asignado</li>
+              <li><div class="chk"></div>Fotografías cargadas</li>
+              <li><div class="chk"></div>Noticia vinculada</li>
+            </ul>
+          </div>
+          <div class="aside-card">
+            <div class="aside-title">Fase 1 — Ingreso manual</div>
+            <div style="font-size:12px;color:var(--texto-suave);line-height:1.6">
+              Esta es la fase de captura de datos estructurados. En fases posteriores se habilitará:<br><br>
+              · Scraping automático de prensa<br>
+              · Autocompletado con IA<br>
+              · Integración SAF / SRCeI<br>
+              · Generación automática de boletín
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW HISTORIAL (placeholder) -->
+    <div class="view" id="view-historial">
+      <div style="padding:40px 28px;color:var(--texto-tenue);font-size:14px;text-align:center;margin-top:60px">
+        <div style="font-size:32px;margin-bottom:12px;color:var(--azul-medio)">◫</div>
+        Historial de boletines anteriores — próximamente
+      </div>
+    </div>
+
+    <!-- VIEW CONFIGURACIÓN (placeholder) -->
+    <div class="view" id="view-configuracion">
+      <div style="padding:40px 28px;color:var(--texto-tenue);font-size:14px;text-align:center;margin-top:60px">
+        <div style="font-size:32px;margin-bottom:12px;color:var(--azul-medio)">⚙</div>
+        Configuración del sistema — próximamente
+      </div>
+    </div>
+
+  </main>
+</div><!-- /layout -->
+
+<!-- MODAL NUEVO CASO RÁPIDO -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="modal-title">Ingreso rápido de caso</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid fg-2">
+        <div class="field"><label class="required">Fecha</label><input type="date"></div>
+        <div class="field"><label class="required">RUC</label><input type="text" placeholder="2500XXXXXX-X"></div>
+        <div class="field fg-full"><label class="required">Tipo de delito</label>
+          <select><option>Tráfico ilícito de drogas</option><option>Microtráfico</option><option>Porte / tenencia de armas</option><option>Robo con violencia</option><option>Violación de morada</option><option>Otro</option></select>
+        </div>
+        <div class="field fg-full"><label class="required">Lugar</label><input type="text" placeholder="Dirección y comuna"></div>
+        <div class="field fg-full"><label>Relato breve</label><textarea style="min-height:72px" placeholder="Descripción del hecho..."></textarea></div>
+      </div>
+      <div style="margin-top:10px;font-size:12px;color:var(--texto-tenue)">Para ingresar todos los campos, usa el formulario completo.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+      <button class="btn-sec" onclick="closeModal();showView('ingreso')">Formulario completo</button>
+      <button class="btn-pri" onclick="guardarCaso()">Guardar rápido</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+  function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    const el = document.getElementById('view-' + id);
+    if (el) el.classList.add('active');
+    document.querySelectorAll('.topbar-nav a').forEach(a => a.classList.remove('active'));
+    const navEl = document.getElementById('nav-' + id);
+    if (navEl) navEl.classList.add('active');
+  }
+
+  function toggleCase(card) {
+    const wasOpen = card.classList.contains('open');
+    document.querySelectorAll('.case-card.open').forEach(c => c.classList.remove('open'));
+    if (!wasOpen) card.classList.add('open');
+  }
+
+  function filtrarBoletin(cat, el) {
+    document.querySelectorAll('.filtro-tag').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.case-card').forEach(c => {
+      c.style.display = (cat === 'todos' || c.dataset.cat === cat) ? '' : 'none';
+    });
+  }
+
+  function filterSidebar(cat, el) {
+    document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+    el.classList.add('active');
+    showView('boletin');
+    document.querySelectorAll('.case-card').forEach(c => {
+      c.style.display = (cat === 'todos' || c.dataset.cat === cat) ? '' : 'none';
+    });
+    document.querySelectorAll('.filtro-tag').forEach(t => {
+      t.classList.toggle('active', t.textContent.toLowerCase().startsWith(cat === 'todos' ? 'todos' : cat));
+    });
+  }
+
+  function openModal() { document.getElementById('modal').classList.add('open'); }
+  function closeModal() { document.getElementById('modal').classList.remove('open'); }
+  document.getElementById('modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  function guardarCaso() {
+    closeModal();
+    showToast('Caso guardado correctamente en el boletín N° 9');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3200);
+  }
+
+  function cargarFoto(input) {
+    if (!input.files || !input.files[0]) return;
+    const reader = new FileReader();
+    const slot = input.parentElement;
+    reader.onload = function(e) {
+      slot.innerHTML = '<img src="' + e.target.result + '" class="foto-loaded" alt="Fotografía">';
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+</script>
+</body>
+</html>
