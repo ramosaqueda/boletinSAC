@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useBoletines, useCrearBoletin, useActualizarEstadoBoletin } from '@/lib/hooks'
+import { useBoletines, useCrearBoletin, useActualizarEstadoBoletin, useEliminarBoletin } from '@/lib/hooks'
+import { useAuthStore, useIsAnalista } from '@/lib/store'
 import { Topbar } from '@/components/layout/Topbar'
 
 const ESTADO_BADGE: Record<string, string> = {
@@ -23,12 +24,12 @@ function formatRango(desde: string, hasta: string) {
 function NuevoBoletinModal({ onClose }: { onClose: () => void }) {
   const router = useRouter()
   const { mutate, isPending, error } = useCrearBoletin()
-  const [form, setForm] = useState({ numero: '', fechaDesde: '', fechaHasta: '' })
+  const [form, setForm] = useState({ numero: '', fechaDesde: '', fechaHasta: '', provincia: '' })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     mutate(
-      { numero: parseInt(form.numero), fechaDesde: form.fechaDesde, fechaHasta: form.fechaHasta },
+      { numero: parseInt(form.numero), fechaDesde: form.fechaDesde, fechaHasta: form.fechaHasta, provincia: form.provincia || undefined },
       { onSuccess: (nuevo) => { onClose(); router.push(`/boletines/${nuevo.id}`) } },
     )
   }
@@ -68,6 +69,17 @@ function NuevoBoletinModal({ onClose }: { onClose: () => void }) {
               />
             </div>
           </div>
+          <div>
+            <label className="block text-[11px] font-semibold text-texto-suave uppercase tracking-wide mb-1">Provincia / Fiscalía</label>
+            <input
+              type="text"
+              value={form.provincia}
+              onChange={e => setForm(f => ({ ...f, provincia: e.target.value }))}
+              placeholder="Fiscalía Regional de Coquimbo"
+              className="w-full border border-gris-borde rounded px-3 py-1.5 text-sm text-azul focus:outline-none focus:border-azul-medio"
+            />
+            <p className="text-[10px] text-texto-tenue mt-0.5">Si se deja vacío se usará "Fiscalía Regional de Coquimbo"</p>
+          </div>
           {error && <p className="text-xs text-rojo">{error.message}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-4 py-1.5 text-sm text-texto-suave border border-gris-borde rounded hover:border-azul-medio transition-colors">
@@ -83,24 +95,95 @@ function NuevoBoletinModal({ onClose }: { onClose: () => void }) {
   )
 }
 
+// ── Modal confirmar eliminación ───────────────────────────────────────────────
+
+function ConfirmarEliminarModal({
+  numero,
+  onConfirm,
+  onClose,
+  isPending,
+}: {
+  numero: number
+  onConfirm: () => void
+  onClose: () => void
+  isPending: boolean
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4">
+        <div className="px-6 py-5 border-b border-gris-borde">
+          <h2 className="font-serif text-base font-semibold text-rojo">Eliminar boletín N° {numero}</h2>
+          <p className="text-xs text-texto-tenue mt-1">Esta acción no se puede deshacer</p>
+        </div>
+        <div className="px-6 py-5">
+          <p className="text-sm text-texto-suave">
+            Se eliminarán permanentemente el boletín y <strong>todos sus casos</strong>, incluyendo imputados, víctimas, incautaciones y fotografías.
+          </p>
+        </div>
+        <div className="px-6 pb-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="px-4 py-1.5 text-sm text-texto-suave border border-gris-borde rounded hover:border-azul-medio transition-colors disabled:opacity-50"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isPending}
+            className="px-5 py-1.5 text-sm bg-rojo hover:bg-rojo-hover text-white rounded transition-colors disabled:opacity-60"
+          >
+            {isPending ? 'Eliminando…' : 'Eliminar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 
 export default function BoletinesPage() {
+  const router     = useRouter()
+  const { token }  = useAuthStore()
+  const esAnalista = useIsAnalista()
+
+  // Guard: sin sesión → login; con sesión pero sin rol analista → vista visitante
+  useEffect(() => {
+    if (token === null) { router.replace('/login'); return }
+    if (!esAnalista)    { router.replace('/') }
+  }, [token, esAnalista, router])
+
   const { data: boletines, isLoading, error } = useBoletines()
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [eliminarId, setEliminarId] = useState<{ id: number; numero: number } | null>(null)
   const { mutate: cambiarEstado, isPending: cambiando } = useActualizarEstadoBoletin()
+  const { mutate: eliminar, isPending: eliminando } = useEliminarBoletin()
+
+  // No renderizar nada mientras se verifica / redirige
+  if (!token || !esAnalista) return null
 
   return (
     <div className="min-h-screen flex flex-col bg-gris-bg">
       <Topbar/>
 
       {modalAbierto && <NuevoBoletinModal onClose={() => setModalAbierto(false)} />}
+      {eliminarId && (
+        <ConfirmarEliminarModal
+          numero={eliminarId.numero}
+          isPending={eliminando}
+          onClose={() => setEliminarId(null)}
+          onConfirm={() => eliminar(eliminarId.id, { onSuccess: () => setEliminarId(null) })}
+        />
+      )}
 
       <main className="flex-1 p-7 max-w-4xl mx-auto w-full">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="font-serif text-xl font-semibold text-azul">Boletines de criminalidad</h1>
-            <p className="text-xs text-texto-tenue mt-1">Provincia del Elqui · Región de Coquimbo</p>
+            <p className="text-xs text-texto-tenue mt-1">Fiscalía Regional de Coquimbo</p>
           </div>
           <button
             onClick={() => setModalAbierto(true)}
@@ -172,12 +255,25 @@ export default function BoletinesPage() {
                       Despublicar
                     </button>
                   )}
-                  <Link
-                    href={`/boletines/${b.id}`}
-                    className="ml-auto text-[11px] text-texto-tenue hover:text-azul transition-colors"
-                  >
-                    Abrir →
-                  </Link>
+                  <div className="ml-auto flex items-center gap-2">
+                    {esAnalista && (
+                      <button
+                        onClick={() => setEliminarId({ id: b.id, numero: b.numero })}
+                        className="p-1 text-texto-tenue hover:text-rojo transition-colors"
+                        title="Eliminar boletín"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8">
+                          <path d="M3 5h14M8 5V3h4v2M6 5l1 12h6l1-12"/>
+                        </svg>
+                      </button>
+                    )}
+                    <Link
+                      href={`/boletines/${b.id}`}
+                      className="text-[11px] text-texto-tenue hover:text-azul transition-colors"
+                    >
+                      Abrir →
+                    </Link>
+                  </div>
                 </div>
               </div>
             ))}

@@ -1,5 +1,5 @@
 'use client'
-import { useState, forwardRef } from 'react'
+import { useState, forwardRef, useCallback } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -65,7 +65,7 @@ type FormValues = {
   relatoBreve: string
   diligencias: string
   observaciones: string
-  lugar: { direccion: string; sector: string; idComuna: string; idTipoLugar: string }
+  lugar: { direccion: string; sector: string; idComuna: string; idTipoLugar: string; coordenadaLat: string; coordenadaLon: string }
   imputados: ImputadoForm[]
   victimas: VictimaForm[]
   incautaciones: IncautacionForm[]
@@ -137,16 +137,52 @@ export default function NuevoCasoPage({ params }: { params: { id: string } }) {
   const [saving, setSaving] = useState(false)
   const [errorGlobal, setErrorGlobal] = useState<string | null>(null)
 
-  const { register, control, watch, setError, clearErrors, handleSubmit, formState: { errors } } =
+  const { register, control, watch, setValue, setError, clearErrors, handleSubmit, formState: { errors } } =
     useForm<FormValues>({
       defaultValues: {
         numeroCaso: '', fechaHecho: '', horaHecho: '', ruc: '', folioBitacora: '',
         idTipoDelitoPpal: '', idEstadoCausa: '', unidadPolicial: '', plazoInvestDias: '',
         relatoBreve: '', diligencias: '', observaciones: '',
-        lugar: { direccion: '', sector: '', idComuna: '', idTipoLugar: '' },
+        lugar: { direccion: '', sector: '', idComuna: '', idTipoLugar: '', coordenadaLat: '', coordenadaLon: '' },
         imputados: [], victimas: [], incautaciones: [], vehiculos: [],
       },
     })
+
+  const [geocodificando, setGeocodificando] = useState(false)
+  const [geoError, setGeoError]             = useState<string | null>(null)
+
+  type P = { id: number; codigo: string; nombre: string }
+  const par = param as {
+    tiposDelito?: P[]; estadosCausa?: P[]; comunas?: P[]; tiposLugar?: P[]
+    tiposDocumento?: P[]; sexos?: P[]; calidadesVictima?: P[]; tiposLesiones?: P[]
+    tiposEspecie?: P[]; subtiposDroga?: P[]; subtiposArma?: P[]; rolesVehiculo?: P[]
+  } | undefined
+
+  const geocodificar = useCallback(async () => {
+    const { direccion, sector } = watch('lugar')
+    const comunaId = watch('lugar.idComuna')
+    const comunaNombre = par?.comunas?.find(c => String(c.id) === comunaId)?.nombre ?? ''
+    const q = encodeURIComponent([direccion, sector, comunaNombre, 'Chile'].filter(Boolean).join(', '))
+    setGeocodificando(true)
+    setGeoError(null)
+    try {
+      const res  = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`, {
+        headers: { 'Accept-Language': 'es' },
+      })
+      const data = await res.json()
+      if (data[0]) {
+        setValue('lugar.coordenadaLat', data[0].lat)
+        setValue('lugar.coordenadaLon', data[0].lon)
+      } else {
+        setGeoError('Sin resultados — ingrese las coordenadas manualmente')
+      }
+    } catch {
+      setGeoError('Error al consultar el geocodificador')
+    } finally {
+      setGeocodificando(false)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [par, setValue, watch])
 
   const imputadosField     = useFieldArray({ control, name: 'imputados' })
   const victimasField      = useFieldArray({ control, name: 'victimas' })
@@ -195,10 +231,12 @@ export default function NuevoCasoPage({ params }: { params: { id: string } }) {
         diligencias:      data.diligencias || undefined,
         observaciones:    data.observaciones || undefined,
         lugar: {
-          direccion:   data.lugar.direccion,
-          sector:      data.lugar.sector || undefined,
-          idComuna:    parseInt(data.lugar.idComuna),
-          idTipoLugar: toId(data.lugar.idTipoLugar),
+          direccion:     data.lugar.direccion,
+          sector:        data.lugar.sector || undefined,
+          idComuna:      parseInt(data.lugar.idComuna),
+          idTipoLugar:   toId(data.lugar.idTipoLugar),
+          coordenadaLat: toNum(data.lugar.coordenadaLat),
+          coordenadaLon: toNum(data.lugar.coordenadaLon),
         },
       })
 
@@ -251,13 +289,6 @@ export default function NuevoCasoPage({ params }: { params: { id: string } }) {
       setSaving(false)
     }
   }
-
-  type P = { id: number; codigo: string; nombre: string }
-  const par = param as {
-    tiposDelito?: P[]; estadosCausa?: P[]; comunas?: P[]; tiposLugar?: P[]
-    tiposDocumento?: P[]; sexos?: P[]; calidadesVictima?: P[]; tiposLesiones?: P[]
-    tiposEspecie?: P[]; subtiposDroga?: P[]; subtiposArma?: P[]; rolesVehiculo?: P[]
-  } | undefined
 
   if (!esAnalista) {
     return (
@@ -340,7 +371,7 @@ export default function NuevoCasoPage({ params }: { params: { id: string } }) {
                 <ErrorMsg msg={errors.idTipoDelitoPpal?.message} />
               </div>
               <div>
-                <Label>Estado de la causa *</Label>
+                <Label>Situación imputado *</Label>
                 <Sel {...register('idEstadoCausa')}>
                   <option value="">Seleccionar…</option>
                   {par?.estadosCausa?.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
@@ -388,6 +419,66 @@ export default function NuevoCasoPage({ params }: { params: { id: string } }) {
                   <option value="">Sin especificar</option>
                   {par?.tiposLugar?.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
                 </Sel>
+              </div>
+
+              {/* Coordenadas */}
+              <div className="col-span-2 border-t border-gris-borde pt-4 mt-1">
+                <div className="flex items-center justify-between mb-3">
+                  <Label>Coordenadas geográficas</Label>
+                  <button
+                    type="button"
+                    onClick={geocodificar}
+                    disabled={geocodificando}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-azul hover:bg-azul-hover text-white text-[11px] rounded transition-colors disabled:opacity-60"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2">
+                      <circle cx="9" cy="9" r="6"/><path d="M15 15l4 4"/>
+                    </svg>
+                    {geocodificando ? 'Buscando…' : 'Geocodificar dirección'}
+                  </button>
+                </div>
+                {geoError && <p className="text-[11px] text-naranja mb-2">{geoError}</p>}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Latitud</Label>
+                    <Input
+                      placeholder="-29.9586"
+                      className="font-mono"
+                      {...register('lugar.coordenadaLat')}
+                    />
+                  </div>
+                  <div>
+                    <Label>Longitud</Label>
+                    <Input
+                      placeholder="-71.3433"
+                      className="font-mono"
+                      {...register('lugar.coordenadaLon')}
+                    />
+                  </div>
+                </div>
+
+                {/* Minimap preview */}
+                {(() => {
+                  const latStr = watch('lugar.coordenadaLat')
+                  const lonStr = watch('lugar.coordenadaLon')
+                  const lat = parseFloat(latStr)
+                  const lon = parseFloat(lonStr)
+                  if (isNaN(lat) || isNaN(lon)) return null
+                  const url = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.003},${lat - 0.002},${lon + 0.003},${lat + 0.002}&layer=mapnik&marker=${lat},${lon}`
+                  return (
+                    <div className="mt-3 rounded-lg overflow-hidden border border-azul-medio" style={{ height: 200 }}>
+                      <iframe
+                        src={url}
+                        width="100%"
+                        height="200"
+                        style={{ border: 0, display: 'block' }}
+                        loading="lazy"
+                        title="Vista previa ubicación"
+                        sandbox="allow-scripts allow-same-origin"
+                      />
+                    </div>
+                  )
+                })()}
               </div>
             </div>
           </div>

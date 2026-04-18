@@ -38,8 +38,8 @@ COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY packages/shared ./packages/shared
 
 ENV NODE_ENV=production
-ENV PORT=8003
+ENV PORT=3004
 
-EXPOSE 8003
+EXPOSE 3004
 
 CMD ["node", "apps/api/dist/index.js"]

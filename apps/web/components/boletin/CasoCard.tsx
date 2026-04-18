@@ -3,12 +3,12 @@ import { useState, useEffect, useRef } from 'react'
 import {
   useCaso, useSubirFotografia, useEliminarFotografia,
   useCrearNoticia, useEliminarNoticia,
-  useCrearImputado, useEliminarImputado,
+  useCrearImputado, useEliminarImputado, useActualizarFotoImputado,
   useCrearVictima, useEliminarVictima,
   useCrearIncautacion, useEliminarIncautacion,
   useAgregarHashtag, useEliminarHashtag, useHashtagSugerencias,
   useActualizarCaso, useScrapeUrl, useFotoDesdeUrl,
-  useParametricas, useRedAsociativa,
+  useParametricas, useRedAsociativa, useActualizarLugar,
 } from '@/lib/hooks'
 import type { CasoResumen, CasoCompleto, Noticia, Imputado, Incautacion, ImputadoConexion } from '@/lib/hooks'
 import { useIsAnalista } from '@/lib/store'
@@ -46,7 +46,7 @@ function formatFecha(s: string) {
 }
 
 function iniciales(apellido: string, nombres: string) {
-  return (apellido[0] + nombres[0]).toUpperCase()
+  return ((apellido[0] ?? '') + (nombres[0] ?? '')).toUpperCase()
 }
 
 // ── Modal de edición de caso ──────────────────────────────────────────────────
@@ -75,7 +75,7 @@ function EditarCasoModal({ data, onClose }: { data: CasoCompleto; onClose: () =>
 
   const [form, setForm] = useState({
     fechaHecho:       data.fechaHecho               ?? '',
-    horaHecho:        data.horaHecho?.slice(0, 5)   ?? '',  // DB devuelve HH:MM:SS → recortamos
+    horaHecho:        data.horaHecho?.slice(0, 5)   ?? '',
     ruc:              data.ruc                       ?? '',
     folioBitacora:    data.folioBitacora             ?? '',
     idTipoDelitoPpal: '',
@@ -213,6 +213,258 @@ function EditarCasoModal({ data, onClose }: { data: CasoCompleto; onClose: () =>
   )
 }
 
+// ── Minimap OpenStreetMap ─────────────────────────────────────────────────────
+
+type LugarInfo = {
+  id: number
+  direccion: string
+  sector: string | null
+  comuna: string
+  tipoLugar: string | null
+  coordenadaLat: string | null
+  coordenadaLon: string | null
+}
+
+function MinimapPanel({ lugar, casoId, esAnalista }: { lugar: LugarInfo; casoId: number; esAnalista: boolean }) {
+  const { data: param } = useParametricas()
+  const actualizar      = useActualizarLugar(casoId)
+
+  // ── Estado dirección ──
+  const [editDir, setEditDir]   = useState(false)
+  const [direccion, setDireccion] = useState(lugar.direccion)
+  const [sector, setSector]     = useState(lugar.sector ?? '')
+  const [idComuna, setIdComuna] = useState('')
+
+  // ── Estado coordenadas ──
+  const [editCoords, setEditCoords] = useState(false)
+  const [lat, setLat]               = useState(lugar.coordenadaLat ?? '')
+  const [lon, setLon]               = useState(lugar.coordenadaLon ?? '')
+  const [buscando, setBuscando]     = useState(false)
+  const [geoError, setGeoError]     = useState<string | null>(null)
+
+  const par = param as { comunas?: { id: number; codigo: string; nombre: string }[] } | undefined
+
+  // Inicializar idComuna cuando lleguen las paramétricas
+  useEffect(() => {
+    if (!par?.comunas || idComuna) return
+    const c = par.comunas.find(c => c.nombre === lugar.comuna)
+    if (c) setIdComuna(String(c.id))
+  }, [param, lugar.comuna, idComuna, par])
+
+  const latNum    = parseFloat(lugar.coordenadaLat ?? '')
+  const lonNum    = parseFloat(lugar.coordenadaLon ?? '')
+  const hasCoords = !isNaN(latNum) && !isNaN(lonNum)
+
+  const embedUrl = hasCoords
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${lonNum - 0.003},${latNum - 0.002},${lonNum + 0.003},${latNum + 0.002}&layer=mapnik&marker=${latNum},${lonNum}`
+    : null
+
+  // ── Geocodificar usando la dirección actual del formulario ──
+  async function geocodificar() {
+    setBuscando(true)
+    setGeoError(null)
+    const comunaNombre = par?.comunas?.find(c => String(c.id) === idComuna)?.nombre ?? lugar.comuna
+    const q = encodeURIComponent(
+      [direccion, sector, comunaNombre, 'Chile'].filter(Boolean).join(', ')
+    )
+    try {
+      const res  = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`, {
+        headers: { 'Accept-Language': 'es' },
+      })
+      const json = await res.json()
+      if (json[0]) {
+        setLat(json[0].lat); setLon(json[0].lon); setGeoError(null)
+      } else {
+        setGeoError('Sin resultados — intente con la dirección más precisa')
+      }
+    } catch {
+      setGeoError('Error al consultar el geocodificador')
+    } finally {
+      setBuscando(false)
+    }
+  }
+
+  function guardarDireccion() {
+    if (!direccion.trim()) { setGeoError('La dirección es obligatoria'); return }
+    const payload: Parameters<typeof actualizar.mutate>[0] = {
+      direccion: direccion.trim(),
+      sector:    sector.trim() || null,
+    }
+    if (idComuna) payload.idComuna = parseInt(idComuna)
+    actualizar.mutate(payload, {
+      onSuccess: () => { setEditDir(false); setGeoError(null) },
+      onError:   (err) => setGeoError(err.message),
+    })
+  }
+
+  function guardarCoordenadas() {
+    const latN = parseFloat(lat)
+    const lonN = parseFloat(lon)
+    if (isNaN(latN) || isNaN(lonN)) { setGeoError('Coordenadas inválidas'); return }
+    actualizar.mutate({ coordenadaLat: latN, coordenadaLon: lonN }, {
+      onSuccess: () => { setEditCoords(false); setGeoError(null) },
+      onError:   (err) => setGeoError(err.message),
+    })
+  }
+
+  function eliminarCoordenadas() {
+    actualizar.mutate({ coordenadaLat: null, coordenadaLon: null }, {
+      onSuccess: () => { setLat(''); setLon(''); setGeoError(null) },
+      onError:   (err) => setGeoError(err.message),
+    })
+  }
+
+  return (
+    <div className="mt-4">
+      <SecLabel>Ubicación del hecho</SecLabel>
+
+      {/* ── Dirección ── */}
+      {!editDir ? (
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <p className="text-xs text-texto-suave leading-relaxed">
+            {lugar.direccion}
+            {lugar.sector ? `, sector ${lugar.sector}` : ''}
+            {` · ${lugar.comuna}`}
+          </p>
+          {esAnalista && (
+            <button
+              onClick={() => { setDireccion(lugar.direccion); setSector(lugar.sector ?? ''); setEditDir(true) }}
+              className="flex-shrink-0 text-[11px] text-texto-tenue hover:text-azul transition-colors flex items-center gap-1"
+            >
+              <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 0 3L10 14l-4 1 1-4 8.5-8.5z"/>
+              </svg>
+              Editar
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="bg-azul-suave border border-azul-medio rounded-lg p-3 flex flex-col gap-2 mb-2">
+          <div>
+            <label className="block text-[10px] text-texto-tenue mb-0.5 font-medium">Dirección *</label>
+            <input
+              type="text" value={direccion} onChange={e => setDireccion(e.target.value)}
+              className="w-full text-xs border border-gris-borde rounded px-2 py-1 bg-white focus:outline-none focus:border-azul-medio"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-[10px] text-texto-tenue mb-0.5 font-medium">Sector / barrio</label>
+              <input
+                type="text" value={sector} onChange={e => setSector(e.target.value)}
+                placeholder="Opcional"
+                className="w-full text-xs border border-gris-borde rounded px-2 py-1 bg-white focus:outline-none focus:border-azul-medio"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] text-texto-tenue mb-0.5 font-medium">Comuna</label>
+              <select
+                value={idComuna}
+                onChange={e => setIdComuna(e.target.value)}
+                className="w-full text-xs border border-gris-borde rounded px-2 py-1 bg-white focus:outline-none focus:border-azul-medio"
+              >
+                <option value="">Sin cambio</option>
+                {par?.comunas?.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </div>
+          </div>
+          {geoError && <p className="text-[11px] text-rojo">{geoError}</p>}
+          <div className="flex gap-2">
+            <button onClick={guardarDireccion} disabled={actualizar.isPending}
+              className="px-3 py-1 text-[11px] bg-azul hover:bg-azul-hover text-white rounded transition-colors disabled:opacity-60">
+              {actualizar.isPending ? 'Guardando…' : 'Guardar'}
+            </button>
+            <button onClick={() => { setEditDir(false); setGeoError(null) }}
+              className="px-3 py-1 text-[11px] border border-gris-borde rounded text-texto-suave hover:border-azul-medio transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Minimap ── */}
+      {embedUrl && (
+        <div className="rounded-lg overflow-hidden border border-azul-medio mb-2" style={{ height: 180 }}>
+          <iframe
+            src={embedUrl} width="100%" height="180"
+            style={{ border: 0, display: 'block' }}
+            loading="lazy" title="Ubicación del hecho"
+            sandbox="allow-scripts allow-same-origin"
+          />
+        </div>
+      )}
+
+      {/* ── Controles coordenadas ── */}
+      {esAnalista && (
+        !editCoords ? (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => { setEditCoords(true); setLat(lugar.coordenadaLat ?? ''); setLon(lugar.coordenadaLon ?? '') }}
+              className="text-[11px] text-azul hover:underline flex items-center gap-1"
+            >
+              <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="10" cy="10" r="3"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2"/>
+              </svg>
+              {hasCoords ? 'Editar coordenadas' : '+ Agregar coordenadas'}
+            </button>
+            {hasCoords && (
+              <button
+                onClick={eliminarCoordenadas}
+                disabled={actualizar.isPending}
+                className="text-[11px] text-texto-tenue hover:text-rojo flex items-center gap-1 transition-colors disabled:opacity-50"
+                title="Eliminar coordenadas"
+              >
+                <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 5h14M8 5V3h4v2M6 5l1 12h6l1-12"/>
+                </svg>
+                Eliminar coordenadas
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="bg-azul-suave border border-azul-medio rounded-lg p-3 flex flex-col gap-2.5">
+            <button
+              onClick={geocodificar} disabled={buscando}
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-azul hover:bg-azul-hover text-white text-[11px] rounded transition-colors disabled:opacity-60"
+            >
+              <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <circle cx="9" cy="9" r="6"/><path d="M15 15l4 4"/>
+              </svg>
+              {buscando ? 'Buscando en OpenStreetMap…' : 'Geocodificar dirección'}
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] text-texto-tenue mb-0.5 font-medium">Latitud</label>
+                <input type="text" value={lat} onChange={e => setLat(e.target.value)}
+                  placeholder="-29.9586"
+                  className="w-full text-xs border border-gris-borde rounded px-2 py-1 bg-white focus:outline-none focus:border-azul-medio font-mono" />
+              </div>
+              <div>
+                <label className="block text-[10px] text-texto-tenue mb-0.5 font-medium">Longitud</label>
+                <input type="text" value={lon} onChange={e => setLon(e.target.value)}
+                  placeholder="-71.3433"
+                  className="w-full text-xs border border-gris-borde rounded px-2 py-1 bg-white focus:outline-none focus:border-azul-medio font-mono" />
+              </div>
+            </div>
+            {geoError && <p className="text-[11px] text-rojo">{geoError}</p>}
+            <div className="flex gap-2">
+              <button onClick={guardarCoordenadas} disabled={actualizar.isPending}
+                className="px-3 py-1 text-[11px] bg-azul hover:bg-azul-hover text-white rounded transition-colors disabled:opacity-60">
+                {actualizar.isPending ? 'Guardando…' : 'Guardar'}
+              </button>
+              <button onClick={() => { setEditCoords(false); setGeoError(null) }}
+                className="px-3 py-1 text-[11px] border border-gris-borde rounded text-texto-suave hover:border-azul-medio transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )
+      )}
+    </div>
+  )
+}
+
 // ── CasoDetalle (carga lazy al abrir) ────────────────────────────────────────
 
 function CasoDetalle({ id }: { id: number }) {
@@ -245,6 +497,10 @@ function CasoDetalle({ id }: { id: number }) {
       <div className="p-5">
         <SecLabel>Relato del hecho</SecLabel>
         <p className="font-serif text-sm leading-7 text-texto mb-4">{data.relatoBreve}</p>
+
+        {lugar && (
+          <MinimapPanel lugar={lugar} casoId={data.id} esAnalista={esAnalista} />
+        )}
 
         <IncautacionesPanel casoId={data.id} incautaciones={data.incautaciones} />
 
@@ -565,15 +821,19 @@ interface Foto {
 }
 
 function FotografiasPanel({ casoId, fotos }: { casoId: number; fotos: Foto[] }) {
-  const fileRef    = useRef<HTMLInputElement>(null)
+  const fileRef         = useRef<HTMLInputElement>(null)
   const { data: param } = useParametricas()
-  const subir      = useSubirFotografia(casoId)
-  const eliminar   = useEliminarFotografia(casoId)
-  const esAnalista = useIsAnalista()
-  const [lightbox, setLightbox] = useState<string | null>(null)
-  const [selectedTipo, setSelectedTipo] = useState('')
-  const [descripcion, setDescripcion] = useState('')
-  const [uploadError, setUploadError] = useState<string | null>(null)
+  const subir           = useSubirFotografia(casoId)
+  const fotoDesdeUrl    = useFotoDesdeUrl(casoId)
+  const eliminar        = useEliminarFotografia(casoId)
+  const esAnalista      = useIsAnalista()
+  const [lightbox,      setLightbox]      = useState<string | null>(null)
+  const [selectedTipo,  setSelectedTipo]  = useState('')
+  const [descripcion,   setDescripcion]   = useState('')
+  const [uploadError,   setUploadError]   = useState<string | null>(null)
+  const [modoUrl,       setModoUrl]       = useState(false)
+  const [urlInput,      setUrlInput]      = useState('')
+  const [descUrl,       setDescUrl]       = useState('')
 
   const P = param as { tiposFoto?: { id: number; codigo: string; nombre: string }[] } | undefined
   const tiposFoto = P?.tiposFoto ?? []
@@ -582,20 +842,24 @@ function FotografiasPanel({ casoId, fotos }: { casoId: number; fotos: Foto[] }) 
     const file = e.target.files?.[0]
     if (!file) return
     setUploadError(null)
-
     const fd = new FormData()
     fd.append('foto', file)
     if (selectedTipo) fd.append('idTipoFoto', selectedTipo)
     if (descripcion)  fd.append('descripcion', descripcion)
     fd.append('orden', String(fotos.length + 1))
-
     subir.mutate(fd, {
-      onSuccess: () => {
-        setDescripcion('')
-        if (fileRef.current) fileRef.current.value = ''
-      },
-      onError: (err) => setUploadError(err.message),
+      onSuccess: () => { setDescripcion(''); if (fileRef.current) fileRef.current.value = '' },
+      onError:   (err) => setUploadError(err.message),
     })
+  }
+
+  const handleUrlSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!urlInput.trim()) return
+    fotoDesdeUrl.mutate(
+      { imageUrl: urlInput.trim(), descripcion: descUrl.trim() || undefined },
+      { onSuccess: () => { setUrlInput(''); setDescUrl(''); setModoUrl(false) } },
+    )
   }
 
   return (
@@ -615,17 +879,13 @@ function FotografiasPanel({ casoId, fotos }: { casoId: number; fotos: Foto[] }) 
                 onClick={() => setLightbox(foto.archivoUrl)}
               />
               <div className="absolute inset-0 bg-azul/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
-                <button
-                  onClick={() => setLightbox(foto.archivoUrl)}
-                  className="text-[10px] text-white bg-white/20 hover:bg-white/30 px-2 py-1 rounded transition-colors"
-                >
+                <button onClick={() => setLightbox(foto.archivoUrl)}
+                  className="text-[10px] text-white bg-white/20 hover:bg-white/30 px-2 py-1 rounded transition-colors">
                   Ver
                 </button>
                 {esAnalista && (
-                  <button
-                    onClick={() => eliminar.mutate(foto.id)}
-                    className="text-[10px] text-white bg-rojo/70 hover:bg-rojo px-2 py-1 rounded transition-colors"
-                  >
+                  <button onClick={() => eliminar.mutate(foto.id)}
+                    className="text-[10px] text-white bg-rojo/70 hover:bg-rojo px-2 py-1 rounded transition-colors">
                     Eliminar
                   </button>
                 )}
@@ -644,59 +904,77 @@ function FotografiasPanel({ casoId, fotos }: { casoId: number; fotos: Foto[] }) 
         <p className="text-[11px] text-texto-tenue mb-3">No hay fotografías registradas.</p>
       )}
 
-      {/* Upload — sólo analistas */}
-      {esAnalista && <div className="border border-dashed border-azul-medio rounded-lg p-3 bg-azul-suave">
-        <div className="flex gap-2 mb-2">
-          <select
-            value={selectedTipo}
-            onChange={e => setSelectedTipo(e.target.value)}
-            className="flex-1 border border-gris-borde rounded px-2 py-1 text-[11px] text-azul bg-white focus:outline-none"
-          >
-            <option value="">Tipo de foto…</option>
-            {tiposFoto.map(t => (
-              <option key={t.id} value={t.id}>{t.nombre}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Descripción (opcional)"
-            value={descripcion}
-            onChange={e => setDescripcion(e.target.value)}
-            className="flex-[2] border border-gris-borde rounded px-2 py-1 text-[11px] text-azul bg-white focus:outline-none"
-          />
+      {/* Zona de carga — sólo analistas */}
+      {esAnalista && (
+        <div className="border border-dashed border-azul-medio rounded-lg p-3 bg-azul-suave">
+          {/* Tabs archivo / URL */}
+          <div className="flex gap-1 mb-2">
+            <button
+              type="button"
+              onClick={() => setModoUrl(false)}
+              className={`text-[10px] px-2.5 py-1 rounded transition-colors ${!modoUrl ? 'bg-azul text-white' : 'bg-white text-texto-suave border border-gris-borde hover:border-azul-medio'}`}
+            >
+              Archivo
+            </button>
+            <button
+              type="button"
+              onClick={() => setModoUrl(true)}
+              className={`text-[10px] px-2.5 py-1 rounded transition-colors ${modoUrl ? 'bg-azul text-white' : 'bg-white text-texto-suave border border-gris-borde hover:border-azul-medio'}`}
+            >
+              Desde URL
+            </button>
+          </div>
+
+          {!modoUrl ? (
+            <>
+              <div className="flex gap-2 mb-2">
+                <select value={selectedTipo} onChange={e => setSelectedTipo(e.target.value)}
+                  className="flex-1 border border-gris-borde rounded px-2 py-1 text-[11px] text-azul bg-white focus:outline-none">
+                  <option value="">Tipo de foto…</option>
+                  {tiposFoto.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                </select>
+                <input type="text" placeholder="Descripción (opcional)" value={descripcion}
+                  onChange={e => setDescripcion(e.target.value)}
+                  className="flex-[2] border border-gris-borde rounded px-2 py-1 text-[11px] text-azul bg-white focus:outline-none" />
+              </div>
+              <label className={`flex items-center justify-center gap-2 text-[11px] font-medium cursor-pointer rounded py-2 transition-colors
+                ${subir.isPending ? 'bg-gris-borde text-texto-tenue' : 'bg-azul hover:bg-azul-hover text-white'}`}>
+                {subir.isPending ? 'Subiendo…' : '+ Seleccionar imagen'}
+                <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp"
+                  className="hidden" disabled={subir.isPending} onChange={handleFileChange} />
+              </label>
+            </>
+          ) : (
+            <form onSubmit={handleUrlSubmit} className="flex flex-col gap-2">
+              <input type="url" placeholder="URL de la imagen *" value={urlInput}
+                onChange={e => setUrlInput(e.target.value)} required
+                className="border border-gris-borde rounded px-2 py-1.5 text-[11px] text-azul bg-white focus:outline-none focus:border-azul-medio" />
+              <div className="flex gap-2">
+                <input type="text" placeholder="Descripción (opcional)" value={descUrl}
+                  onChange={e => setDescUrl(e.target.value)}
+                  className="flex-1 border border-gris-borde rounded px-2 py-1.5 text-[11px] text-azul bg-white focus:outline-none focus:border-azul-medio" />
+                <button type="submit" disabled={fotoDesdeUrl.isPending}
+                  className="text-[11px] font-medium text-white bg-azul hover:bg-azul-hover px-3 rounded transition-colors disabled:opacity-60 shrink-0">
+                  {fotoDesdeUrl.isPending ? 'Guardando…' : 'Agregar'}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {uploadError && <p className="text-[10px] text-rojo mt-1">{uploadError}</p>}
         </div>
-        <label className={`flex items-center justify-center gap-2 text-[11px] font-medium cursor-pointer rounded py-2 transition-colors
-          ${subir.isPending ? 'bg-gris-borde text-texto-tenue' : 'bg-azul hover:bg-azul-hover text-white'}`}>
-          {subir.isPending ? 'Subiendo…' : '+ Seleccionar imagen'}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            disabled={subir.isPending}
-            onChange={handleFileChange}
-          />
-        </label>
-        {uploadError && <p className="text-[10px] text-rojo mt-1">{uploadError}</p>}
-      </div>}
+      )}
 
       {/* Lightbox */}
       {lightbox && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setLightbox(null)}
-        >
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setLightbox(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightbox}
-            alt="Fotografía caso"
+          <img src={lightbox} alt="Fotografía caso"
             className="max-w-full max-h-full rounded shadow-xl object-contain"
-            onClick={e => e.stopPropagation()}
-          />
-          <button
-            onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 text-white text-2xl leading-none hover:text-gray-300"
-          >
+            onClick={e => e.stopPropagation()} />
+          <button onClick={() => setLightbox(null)}
+            className="absolute top-4 right-4 text-white text-2xl leading-none hover:text-gray-300">
             ×
           </button>
         </div>
@@ -706,6 +984,57 @@ function FotografiasPanel({ casoId, fotos }: { casoId: number; fotos: Foto[] }) 
 }
 
 // ── Panel de imputados ────────────────────────────────────────────────────────
+
+function ImputadoFotoInput({ casoId, imp }: { casoId: number; imp: Imputado }) {
+  const actualizarFoto = useActualizarFotoImputado(casoId)
+  const [editando, setEditando] = useState(false)
+  const [url, setUrl] = useState(imp.fotoUrl ?? '')
+
+  const guardar = () => {
+    actualizarFoto.mutate(
+      { imputadoId: imp.id, fotoUrl: url.trim() || null },
+      { onSuccess: () => setEditando(false) },
+    )
+  }
+
+  if (!editando) {
+    return (
+      <button
+        onClick={() => setEditando(true)}
+        className="text-[9px] text-azul hover:underline mt-1 block"
+        title={imp.fotoUrl ? 'Cambiar foto' : 'Agregar foto'}
+      >
+        {imp.fotoUrl ? 'Cambiar foto' : '+ Foto URL'}
+      </button>
+    )
+  }
+
+  return (
+    <div className="mt-1.5 flex gap-1" onClick={e => e.stopPropagation()}>
+      <input
+        type="url"
+        value={url}
+        onChange={e => setUrl(e.target.value)}
+        placeholder="https://…"
+        className="flex-1 border border-azul-medio rounded px-1.5 py-1 text-[10px] text-azul bg-white focus:outline-none min-w-0"
+        autoFocus
+      />
+      <button
+        onClick={guardar}
+        disabled={actualizarFoto.isPending}
+        className="text-[10px] text-white bg-azul hover:bg-azul-hover px-2 rounded transition-colors disabled:opacity-60 shrink-0"
+      >
+        {actualizarFoto.isPending ? '…' : 'OK'}
+      </button>
+      <button
+        onClick={() => { setEditando(false); setUrl(imp.fotoUrl ?? '') }}
+        className="text-[10px] text-texto-tenue px-1 hover:text-rojo"
+      >
+        ×
+      </button>
+    </div>
+  )
+}
 
 function ImputadosPanel({ casoId, imputados }: { casoId: number; imputados: Imputado[] }) {
   const crear      = useCrearImputado(casoId)
@@ -760,38 +1089,53 @@ function ImputadosPanel({ casoId, imputados }: { casoId: number; imputados: Impu
 
       {imputados.map((imp) => (
         <div key={imp.id} className="bg-white border border-azul-medio rounded-lg p-3 mb-2 group relative">
-          <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-semibold text-white flex-shrink-0
-                            ${imp.alertaReincidencia ? 'bg-rojo' : 'bg-azul'}`}>
-              {iniciales(imp.apellidoPaterno, imp.nombres)}
+          <div className="flex items-start gap-2.5">
+            {/* Avatar: foto o iniciales */}
+            <div className="flex-shrink-0 flex flex-col items-center gap-0.5">
+              {imp.fotoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imp.fotoUrl}
+                  alt={imp.apellidoPaterno}
+                  className={`w-10 h-10 rounded-full object-cover border-2 ${imp.alertaReincidencia ? 'border-rojo' : 'border-azul-medio'}`}
+                />
+              ) : (
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[12px] font-semibold text-white
+                                ${imp.alertaReincidencia ? 'bg-rojo' : 'bg-azul'}`}>
+                  {iniciales(imp.apellidoPaterno, imp.nombres)}
+                </div>
+              )}
+              {esAnalista && <ImputadoFotoInput casoId={casoId} imp={imp} />}
             </div>
+
             <div className="flex-1 min-w-0">
-              <div className="text-[12px] font-semibold text-azul leading-tight truncate">
+              <div className="text-[12px] font-semibold text-azul leading-tight">
                 {imp.apellidoPaterno} {imp.apellidoMaterno ?? ''}, {imp.nombres}
                 {imp.alertaReincidencia && (
                   <span className="ml-1.5 text-[9px] bg-rojo text-white px-1 py-0.5 rounded font-bold">ALERTA</span>
                 )}
               </div>
               <div className="text-[10px] text-texto-tenue font-mono">{imp.tipoDocumento?.toUpperCase()} {imp.numeroDocumento}</div>
+              <div className="grid grid-cols-2 gap-1.5 mt-2">
+                <div className={`rounded p-1.5 text-center ${imp.numCausasPrevias >= 10 ? 'bg-rojo-claro' : 'bg-azul-suave'}`}>
+                  <div className={`text-sm font-semibold leading-none ${imp.numCausasPrevias >= 10 ? 'text-rojo' : 'text-azul'}`}>
+                    {imp.numCausasPrevias}
+                  </div>
+                  <div className="text-[9px] text-texto-tenue mt-0.5">Causas previas</div>
+                </div>
+                <div className="bg-azul-suave rounded p-1.5 text-center">
+                  <div className="text-sm font-semibold text-azul leading-none">{imp.numComplices}</div>
+                  <div className="text-[9px] text-texto-tenue mt-0.5">Cómplices</div>
+                </div>
+              </div>
             </div>
+
             {esAnalista && (
               <button onClick={() => eliminar.mutate(imp.id)} disabled={eliminar.isPending}
-                className="text-[10px] text-rojo opacity-0 group-hover:opacity-100 transition-opacity hover:underline flex-shrink-0">
+                className="text-[10px] text-rojo opacity-0 group-hover:opacity-100 transition-opacity hover:underline flex-shrink-0 mt-0.5">
                 Eliminar
               </button>
             )}
-          </div>
-          <div className="grid grid-cols-2 gap-1.5 mt-2.5">
-            <div className={`rounded p-1.5 text-center ${imp.numCausasPrevias >= 10 ? 'bg-rojo-claro' : 'bg-azul-suave'}`}>
-              <div className={`text-sm font-semibold leading-none ${imp.numCausasPrevias >= 10 ? 'text-rojo' : 'text-azul'}`}>
-                {imp.numCausasPrevias}
-              </div>
-              <div className="text-[9px] text-texto-tenue mt-0.5">Causas previas</div>
-            </div>
-            <div className="bg-azul-suave rounded p-1.5 text-center">
-              <div className="text-sm font-semibold text-azul leading-none">{imp.numComplices}</div>
-              <div className="text-[9px] text-texto-tenue mt-0.5">Cómplices</div>
-            </div>
           </div>
         </div>
       ))}

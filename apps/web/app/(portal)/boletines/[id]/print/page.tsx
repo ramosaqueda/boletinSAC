@@ -307,6 +307,24 @@ function CasoSection({ caso, index }: { caso: ExportCaso; index: number }) {
           </>
         )}
 
+        {/* Notas del analista */}
+        {caso.observaciones && (
+          <>
+            <SectionTitle>Notas del analista</SectionTitle>
+            <div style={{
+              background: '#fffbea',
+              border: '1px solid #e8cc60',
+              borderLeft: '3pt solid #d4a800',
+              borderRadius: '3pt',
+              padding: '5pt 8pt',
+            }}>
+              <p style={{ fontSize: '7.5pt', lineHeight: 1.55, color: '#3a2e00', margin: 0 }}>
+                {caso.observaciones}
+              </p>
+            </div>
+          </>
+        )}
+
         {/* Notas de prensa */}
         {hasNoticias && (
           <>
@@ -421,7 +439,7 @@ export default function PrintPage() {
                 Reporte de Criminalidad N° {data.numero} · Delitos de interés SAC
               </div>
               <div style={{ fontSize: '18pt', fontWeight: 700, color: '#1C3F81', lineHeight: 1.15 }}>
-                {data.provincia ?? 'Provincia del Elqui'}
+                {data.provincia ?? 'Fiscalía Regional de Coquimbo'}
               </div>
               <div style={{ fontSize: '11pt', color: '#333', marginTop: '3pt' }}>
                 Semana del {fmtCorto(data.fechaDesde)} al {fmtCorto(data.fechaHasta)} de {new Date(data.fechaDesde + 'T12:00:00').getFullYear()}

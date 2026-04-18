@@ -145,7 +145,7 @@ export interface CasoCompleto {
   observaciones:    string | null
   urlNoticia1:      string | null
   urlNoticia2:      string | null
-  lugares:          { id: number; direccion: string; sector: string | null; comuna: string; tipoLugar: string | null }[]
+  lugares:          { id: number; direccion: string; sector: string | null; comuna: string; tipoLugar: string | null; coordenadaLat: string | null; coordenadaLon: string | null }[]
   imputados:        Imputado[]
   victimas:         { id: number; nombre: string | null; rut: string | null; calidad: string | null; tipoLesiones: string | null }[]
   incautaciones:    Incautacion[]
@@ -175,6 +175,32 @@ export function useCrearBoletin() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: unknown) => api.post<ResumenBoletin>('/boletines', data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['boletines'] }),
+  })
+}
+
+export function useActualizarBoletin(id: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      numero?: number
+      fechaDesde?: string
+      fechaHasta?: string
+      provincia?: string
+      region?: string
+      resumen?: string
+    }) => api.patch(`/boletines/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['boletines', id] })
+      qc.invalidateQueries({ queryKey: ['boletines'] })
+    },
+  })
+}
+
+export function useEliminarBoletin() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.delete(`/boletines/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['boletines'] }),
   })
 }
@@ -212,6 +238,17 @@ export function useDespublicarBoletin(id: number) {
 
 // ── Actualizar caso ───────────────────────────────────────────────────────────
 
+export function useEliminarCaso(boletinId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (casoId: number) => api.delete(`/casos/${casoId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['boletines', boletinId] })
+      qc.invalidateQueries({ queryKey: ['boletines'] })
+    },
+  })
+}
+
 export function useActualizarCaso(casoId: number) {
   const qc = useQueryClient()
   return useMutation({
@@ -237,6 +274,30 @@ export function useEliminarImputado(casoId: number) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (imputadoId: number) => api.delete(`/casos/${casoId}/imputados/${imputadoId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['casos', casoId] }),
+  })
+}
+
+export function useActualizarLugar(casoId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: {
+      direccion?:     string
+      sector?:        string | null
+      idComuna?:      number
+      idTipoLugar?:   number | null
+      coordenadaLat?: number | null
+      coordenadaLon?: number | null
+    }) => api.patch(`/casos/${casoId}/lugar`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['casos', casoId] }),
+  })
+}
+
+export function useActualizarFotoImputado(casoId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ imputadoId, fotoUrl }: { imputadoId: number; fotoUrl: string | null }) =>
+      api.patch(`/casos/${casoId}/imputados/${imputadoId}/foto`, { fotoUrl }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['casos', casoId] }),
   })
 }

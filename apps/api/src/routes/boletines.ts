@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import {
@@ -14,14 +14,20 @@ const CrearBoletinSchema = z.object({
   numero:     z.number().int().positive(),
   fechaDesde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato YYYY-MM-DD'),
   fechaHasta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato YYYY-MM-DD'),
+  provincia:  z.string().optional(),
   idEstado:   z.number().int().positive().optional(),
   resumen:    z.string().optional(),
 })
 
 const ActualizarBoletinSchema = z.object({
-  resumen:  z.string().optional(),
-  idEstado: z.number().int().positive().optional(),
-  fechaPub: z.string().datetime().optional(),
+  numero:     z.number().int().positive().optional(),
+  fechaDesde: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  fechaHasta: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  provincia:  z.string().min(1).optional(),
+  region:     z.string().min(1).optional(),
+  resumen:    z.string().optional(),
+  idEstado:   z.number().int().positive().optional(),
+  fechaPub:   z.string().datetime().optional(),
 })
 
 // ── Rutas ─────────────────────────────────────────────────────────────────────
@@ -72,7 +78,7 @@ export async function boletinesRoutes(app: FastifyInstance) {
         .from(pEstadoBoletin)
         .where(eq(pEstadoBoletin.codigo, 'borrador'))
         .limit(1)
-      idEstado = borrador.id
+      idEstado = borrador!.id
     }
 
     const [nuevo] = await db
@@ -81,6 +87,7 @@ export async function boletinesRoutes(app: FastifyInstance) {
         numero:     body.data.numero,
         fechaDesde: body.data.fechaDesde,
         fechaHasta: body.data.fechaHasta,
+        provincia:  body.data.provincia?.trim() || 'Fiscalía Regional de Coquimbo',
         idAnalista,
         idEstado,
         resumen:    body.data.resumen,
@@ -196,9 +203,11 @@ export async function boletinesRoutes(app: FastifyInstance) {
       const [lugaresCaso, imputadosCaso, victimasCaso, incautacionesCaso, noticiasCaso, fotografiasCaso] =
         await Promise.all([
           db.select({
-            direccion: lugar.direccion,
-            sector:    lugar.sector,
-            comuna:    pComuna.nombre,
+            direccion:     lugar.direccion,
+            sector:        lugar.sector,
+            comuna:        pComuna.nombre,
+            coordenadaLat: lugar.coordenadaLat,
+            coordenadaLon: lugar.coordenadaLon,
           })
           .from(lugar)
           .leftJoin(pComuna, eq(lugar.idComuna, pComuna.id))
@@ -210,6 +219,7 @@ export async function boletinesRoutes(app: FastifyInstance) {
             nombres:            imputado.nombres,
             numCausasPrevias:   imputado.numCausasPrevias,
             alertaReincidencia: imputado.alertaReincidencia,
+            fotoUrl:            imputado.fotoUrl,
           })
           .from(imputado)
           .where(eq(imputado.idCaso, c.id)),
@@ -284,7 +294,7 @@ export async function boletinesRoutes(app: FastifyInstance) {
 
     const [actualizado] = await db
       .update(boletin)
-      .set({ idEstado: estadoPublicado.id, fechaPub: new Date() })
+      .set({ idEstado: estadoPublicado!.id, fechaPub: new Date() })
       .where(eq(boletin.id, boletinId))
       .returning()
 
@@ -311,11 +321,41 @@ export async function boletinesRoutes(app: FastifyInstance) {
 
     const [actualizado] = await db
       .update(boletin)
-      .set({ idEstado: estadoBorrador.id, fechaPub: null })
+      .set({ idEstado: estadoBorrador!.id, fechaPub: null })
       .where(eq(boletin.id, boletinId))
       .returning()
 
     return reply.send(actualizado)
+  })
+
+  // DELETE /boletines/:id — eliminar boletín y todos sus casos (sólo analistas)
+  app.delete('/:id', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const boletinId = parseInt((request.params as { id: string }).id)
+
+    const [existente] = await db
+      .select({ id: boletin.id })
+      .from(boletin)
+      .where(eq(boletin.id, boletinId))
+      .limit(1)
+
+    if (!existente) return reply.status(404).send({ error: 'Boletín no encontrado' })
+
+    // Eliminar en transacción: primero los casos (sus sub-registros cascadean por FK),
+    // luego el boletín
+    await db.transaction(async (tx) => {
+      const casosIds = await tx
+        .select({ id: caso.id })
+        .from(caso)
+        .where(eq(caso.idBoletin, boletinId))
+
+      if (casosIds.length > 0) {
+        await tx.delete(caso).where(inArray(caso.id, casosIds.map(c => c.id)))
+      }
+
+      await tx.delete(boletin).where(eq(boletin.id, boletinId))
+    })
+
+    return reply.status(204).send()
   })
 
   // PATCH /boletines/:id — actualizar estado o resumen (sólo analistas)
@@ -335,9 +375,14 @@ export async function boletinesRoutes(app: FastifyInstance) {
     if (!existente) return reply.status(404).send({ error: 'Boletín no encontrado' })
 
     const valores: Partial<typeof boletin.$inferInsert> = {}
-    if (body.data.resumen  !== undefined) valores.resumen  = body.data.resumen
-    if (body.data.idEstado !== undefined) valores.idEstado = body.data.idEstado
-    if (body.data.fechaPub !== undefined) valores.fechaPub = new Date(body.data.fechaPub)
+    if (body.data.numero     !== undefined) valores.numero     = body.data.numero
+    if (body.data.fechaDesde !== undefined) valores.fechaDesde = body.data.fechaDesde
+    if (body.data.fechaHasta !== undefined) valores.fechaHasta = body.data.fechaHasta
+    if (body.data.provincia  !== undefined) valores.provincia  = body.data.provincia
+    if (body.data.region     !== undefined) valores.region     = body.data.region
+    if (body.data.resumen    !== undefined) valores.resumen    = body.data.resumen
+    if (body.data.idEstado   !== undefined) valores.idEstado   = body.data.idEstado
+    if (body.data.fechaPub   !== undefined) valores.fechaPub   = new Date(body.data.fechaPub)
 
     const [actualizado] = await db
       .update(boletin)

@@ -18,7 +18,7 @@ const app = Fastify({ logger: true })
 // ── Plugins ──────────────────────────────────────────────────────────────────
 
 await app.register(cors, {
-  origin: process.env['CORS_ORIGIN'] ?? 'http://localhost:3000',
+  origin: process.env['CORS_ORIGIN'] ?? 'http://localhost:3003',
   credentials: true,
 })
 

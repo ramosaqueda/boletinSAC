@@ -10,6 +10,7 @@ interface Imputado {
   nombres: string
   numCausasPrevias: number
   alertaReincidencia: boolean
+  fotoUrl: string | null
 }
 
 interface Incautacion {
@@ -31,6 +32,13 @@ interface Fotografia {
   tipoFoto: string | null
 }
 
+interface Noticia {
+  url: string
+  medio: string | null
+  titular: string | null
+  bajada: string | null
+}
+
 interface Caso {
   id: number
   numeroCaso: number
@@ -40,12 +48,14 @@ interface Caso {
   estadoCausaNombre: string
   relatoBreve: string | null
   diligencias: string | null
+  observaciones: string | null
   unidadPolicial: string | null
-  lugar: { direccion: string; sector: string | null; comuna: string | null } | null
+  lugar: { direccion: string; sector: string | null; comuna: string | null; coordenadaLat: string | null; coordenadaLon: string | null } | null
   imputados: Imputado[]
   victimas: Victima[]
   incautaciones: Incautacion[]
   fotografias: Fotografia[]
+  noticias: Noticia[]
 }
 
 interface ExportData {
@@ -89,13 +99,29 @@ function SlidePortada({ data }: { data: ExportData }) {
           Reporte de Criminalidad N° {data.numero} · Delitos de interés SAC
         </div>
         <div style={{ fontSize: '52px', fontWeight: 800, color: 'white', lineHeight: 1.1, marginBottom: '12px' }}>
-          {data.provincia ?? 'Provincia del Elqui'}
+          {data.provincia ?? 'Fiscalía Regional de Coquimbo'}
         </div>
         <div style={{ fontSize: '22px', color: 'rgba(255,255,255,0.75)', fontWeight: 300 }}>
           Semana del {fmtCorto(data.fechaDesde)} al {fmtCorto(data.fechaHasta)} de {new Date(data.fechaDesde + 'T12:00:00').getFullYear()}
         </div>
+        {data.resumen && (
+          <div style={{
+            marginTop: '28px',
+            padding: '16px 20px',
+            background: 'rgba(255,255,255,0.08)',
+            borderLeft: '3px solid rgba(255,255,255,0.35)',
+            borderRadius: '4px',
+          }}>
+            <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>
+              Resumen ejecutivo
+            </div>
+            <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, margin: 0, fontWeight: 300 }}>
+              {data.resumen}
+            </p>
+          </div>
+        )}
         {data.analista && (
-          <div style={{ marginTop: '24px', fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>
+          <div style={{ marginTop: '16px', fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>
             Analista: {data.analista}
           </div>
         )}
@@ -141,7 +167,7 @@ function Lightbox({
   onPrev: () => void
   onNext: () => void
 }) {
-  const foto = fotos[index]
+  const foto = fotos[index]!
 
   // Cerrar con Escape, navegar con flechas (sin propagar al slide)
   useEffect(() => {
@@ -290,15 +316,139 @@ function FotoThumb({ foto, onClick }: { foto: Fotografia; onClick: () => void })
   )
 }
 
+// ── Minimap thumbnail ─────────────────────────────────────────────────────────
+
+function MapaThumb({ lat, lon, onClick }: { lat: number; lon: number; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false)
+  const embedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.004},${lat - 0.003},${lon + 0.004},${lat + 0.003}&layer=mapnik&marker=${lat},${lon}`
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: 'relative', border: 'none', padding: 0, cursor: 'pointer',
+        borderRadius: '6px', overflow: 'hidden',
+        width: '100%', aspectRatio: '4/3', flexShrink: 0,
+        outline: 'none',
+        boxShadow: hovered ? '0 6px 20px rgba(0,0,0,0.6)' : '0 2px 8px rgba(0,0,0,0.4)',
+        transform: hovered ? 'scale(1.04)' : 'scale(1)',
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+      }}
+    >
+      <iframe
+        src={embedUrl}
+        style={{ width: '100%', height: '100%', border: 0, display: 'block', pointerEvents: 'none' }}
+        loading="lazy"
+        title="Mapa ubicación"
+        sandbox="allow-scripts allow-same-origin"
+      />
+      {/* Overlay hover */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'rgba(28,63,129,0.55)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        opacity: hovered ? 1 : 0,
+        transition: 'opacity 0.15s ease',
+      }}>
+        <span style={{ color: 'white', fontSize: '26px', lineHeight: 1 }}>⤢</span>
+      </div>
+      {/* Etiqueta */}
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'linear-gradient(transparent, rgba(0,0,0,0.82))',
+        color: 'white', fontSize: '9px', padding: '14px 6px 5px',
+        lineHeight: 1.3, textAlign: 'center',
+      }}>
+        <strong>Ubicación del hecho</strong>
+      </div>
+    </button>
+  )
+}
+
+// ── Lightbox de mapa ──────────────────────────────────────────────────────────
+
+function MapaLightbox({ lat, lon, onClose }: { lat: number; lon: number; onClose: () => void }) {
+  const embedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lon - 0.012},${lat - 0.008},${lon + 0.012},${lat + 0.008}&layer=mapnik&marker=${lat},${lon}`
+  const osmUrl   = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      e.stopPropagation()
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handler, true)
+    return () => window.removeEventListener('keydown', handler, true)
+  }, [onClose])
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.92)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        animation: 'lb-in 0.18s ease',
+      }}
+    >
+      {/* Botón cerrar */}
+      <button onClick={onClose} style={{
+        position: 'absolute', top: '20px', right: '24px',
+        background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
+        borderRadius: '50%', width: '36px', height: '36px', fontSize: '18px',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>×</button>
+
+      {/* Mapa */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: '80vw', height: '76vh', display: 'flex', flexDirection: 'column', gap: '10px' }}
+      >
+        <div style={{ flex: 1, borderRadius: '10px', overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.6)' }}>
+          <iframe
+            src={embedUrl}
+            width="100%" height="100%"
+            style={{ border: 0, display: 'block' }}
+            title="Mapa ampliado"
+            sandbox="allow-scripts allow-same-origin"
+          />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <a
+            href={osmUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            style={{
+              color: 'rgba(255,255,255,0.6)', fontSize: '12px',
+              textDecoration: 'none', borderBottom: '1px solid rgba(255,255,255,0.2)',
+              paddingBottom: '1px',
+            }}
+          >
+            Abrir en OpenStreetMap ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Slide: Caso ────────────────────────────────────────────────────────────────
 
 function SlideCaso({ caso }: { caso: Caso }) {
-  const [lbIndex, setLbIndex] = useState<number | null>(null)
-  const fotos   = caso.fotografias
-  const hasImp  = caso.imputados.length > 0
-  const hasInc  = caso.incautaciones.length > 0
-  const hasVict = caso.victimas.length > 0
-  const hasFoto = fotos.length > 0
+  const [lbIndex,  setLbIndex]  = useState<number | null>(null)
+  const [mapaOpen, setMapaOpen] = useState(false)
+  const fotos    = caso.fotografias
+  const hasImp   = caso.imputados.length > 0
+  const hasInc   = caso.incautaciones.length > 0
+  const hasVict  = caso.victimas.length > 0
+  const hasFoto  = fotos.length > 0
+  const hasNot   = caso.noticias.length > 0
+
+  const latNum  = parseFloat(caso.lugar?.coordenadaLat ?? '')
+  const lonNum  = parseFloat(caso.lugar?.coordenadaLon ?? '')
+  const hasMapa = !isNaN(latNum) && !isNaN(lonNum)
 
   const lbClose = useCallback(() => setLbIndex(null), [])
   const lbPrev  = useCallback(() => setLbIndex(i => (i !== null && i > 0 ? i - 1 : i)), [])
@@ -333,15 +483,15 @@ function SlideCaso({ caso }: { caso: Caso }) {
         </div>
       </div>
 
-      {/* ── Cuerpo ── */}
+      {/* ── Cuerpo: 3 columnas ── */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* Columna principal */}
-        <div style={{ flex: 1, padding: '24px 48px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+        {/* Columna izquierda: relato + incautaciones + víctimas */}
+        <div style={{ flex: 1, padding: '20px 32px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', borderRight: '1px solid #e5eaf2' }}>
 
           {/* Lugar */}
           {caso.lugar && (
-            <div style={{ fontSize: '13px', color: '#555', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+            <div style={{ fontSize: '12px', color: '#555', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
               <span style={{ color: '#1C3F81', fontWeight: 700, flexShrink: 0 }}>Lugar:</span>
               <span>
                 {caso.lugar.direccion}
@@ -355,30 +505,30 @@ function SlideCaso({ caso }: { caso: Caso }) {
           {caso.relatoBreve && (
             <div>
               <SectionLabel>Relato del hecho</SectionLabel>
-              <p style={{ fontSize: '14px', lineHeight: 1.65, color: '#222', margin: 0 }}>
+              <p style={{ fontSize: '13px', lineHeight: 1.65, color: '#222', margin: 0 }}>
                 {caso.relatoBreve}
               </p>
             </div>
           )}
 
-          {/* Imputados */}
-          {hasImp && (
-            <div>
-              <SectionLabel>{caso.imputados.length === 1 ? 'Imputado' : `Imputados (${caso.imputados.length})`}</SectionLabel>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {caso.imputados.map((imp, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
-                    <span style={{ fontWeight: 600, color: '#1C3F81' }}>{nombreImp(imp)}</span>
-                    <span style={{ color: '#888', fontSize: '12px' }}>·</span>
-                    <span style={{ color: '#555', fontSize: '12px' }}>{imp.numCausasPrevias} causa{imp.numCausasPrevias !== 1 ? 's previas' : ' previa'}</span>
-                    {imp.alertaReincidencia && (
-                      <span style={{ background: '#b91c1c', color: 'white', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '4px' }}>
-                        ⚠ REINCIDENTE
-                      </span>
-                    )}
-                  </div>
-                ))}
+          {/* Notas del analista */}
+          {caso.observaciones && (
+            <div style={{
+              background: '#fffbea',
+              border: '1px solid #f0d060',
+              borderLeft: '4px solid #d4a800',
+              borderRadius: '6px',
+              padding: '10px 14px',
+            }}>
+              <div style={{
+                fontSize: '9px', fontWeight: 700, color: '#a07800',
+                textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px',
+              }}>
+                Notas del analista
               </div>
+              <p style={{ fontSize: '13px', lineHeight: 1.6, color: '#3a2e00', margin: 0 }}>
+                {caso.observaciones}
+              </p>
             </div>
           )}
 
@@ -386,9 +536,9 @@ function SlideCaso({ caso }: { caso: Caso }) {
           {hasVict && (
             <div>
               <SectionLabel>Víctimas ({caso.victimas.length})</SectionLabel>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 {caso.victimas.map((v, i) => (
-                  <div key={i} style={{ fontSize: '13px', color: '#444' }}>
+                  <div key={i} style={{ fontSize: '12px', color: '#444' }}>
                     {v.nombre ?? 'Anónima'}{v.calidad ? ` · ${v.calidad}` : ''}{v.tipoLesiones ? ` · ${v.tipoLesiones}` : ''}
                   </div>
                 ))}
@@ -400,11 +550,11 @@ function SlideCaso({ caso }: { caso: Caso }) {
           {hasInc && (
             <div>
               <SectionLabel>Especies incautadas</SectionLabel>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {caso.incautaciones.map((inc, i) => (
                   <div key={i} style={{
                     background: '#1C3F81', color: 'white',
-                    borderRadius: '6px', padding: '6px 14px', fontSize: '12px',
+                    borderRadius: '6px', padding: '5px 12px', fontSize: '11px',
                   }}>
                     <span style={{ fontWeight: 600 }}>{inc.tipoEspecie ?? 'Especie'}</span>
                     {' · '}{inc.descripcion}
@@ -414,31 +564,119 @@ function SlideCaso({ caso }: { caso: Caso }) {
               </div>
             </div>
           )}
+
+          {/* Notas de prensa */}
+          {hasNot && (
+            <div>
+              <SectionLabel>Notas de prensa</SectionLabel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {caso.noticias.map((n, i) => (
+                  <div key={i} style={{ borderLeft: '3px solid #1C3F81', paddingLeft: '10px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    {n.medio && (
+                      <div style={{ fontSize: '9px', fontWeight: 700, color: '#1C3F81', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{n.medio}</div>
+                    )}
+                    {n.titular && (
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#111', lineHeight: 1.35 }}>{n.titular}</div>
+                    )}
+                    {n.bajada && (
+                      <div style={{ fontSize: '11px', color: '#666', lineHeight: 1.4 }}>{n.bajada}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* ── Strip de fotografías ── */}
-        {hasFoto && (
+        {/* Columna central: imputados con foto */}
+        {hasImp && (
+          <div style={{ width: '200px', flexShrink: 0, padding: '20px 16px', overflowY: 'auto', background: '#f4f7fc', borderRight: '1px solid #e5eaf2' }}>
+            <SectionLabel>{caso.imputados.length === 1 ? 'Imputado' : `Imputados (${caso.imputados.length})`}</SectionLabel>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {caso.imputados.map((imp, i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                  {/* Foto o iniciales */}
+                  {imp.fotoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={imp.fotoUrl}
+                      alt={nombreImp(imp)}
+                      style={{
+                        width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover',
+                        border: imp.alertaReincidencia ? '3px solid #b91c1c' : '3px solid #1C3F81',
+                      }}
+                    />
+                  ) : (
+                    <div style={{
+                      width: '64px', height: '64px', borderRadius: '50%',
+                      background: imp.alertaReincidencia ? '#b91c1c' : '#1C3F81',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '22px', fontWeight: 700, color: 'white',
+                    }}>
+                      {((imp.apellidoPaterno[0] ?? '') + (imp.nombres[0] ?? '')).toUpperCase()}
+                    </div>
+                  )}
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#1C3F81', lineHeight: 1.3 }}>
+                      {imp.apellidoPaterno}{imp.apellidoMaterno ? ' ' + imp.apellidoMaterno : ''}<br />{imp.nombres}
+                    </div>
+                    <div style={{ fontSize: '10px', color: '#666', marginTop: '3px' }}>
+                      {imp.numCausasPrevias} causa{imp.numCausasPrevias !== 1 ? 's previas' : ' previa'}
+                    </div>
+                    {imp.alertaReincidencia && (
+                      <div style={{ marginTop: '4px', background: '#b91c1c', color: 'white', fontSize: '9px', fontWeight: 700, padding: '2px 6px', borderRadius: '3px', display: 'inline-block' }}>
+                        ⚠ REINCIDENTE
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Columna derecha: mapa + fotografías */}
+        {(hasFoto || hasMapa) && (
           <div style={{
-            width: '220px', flexShrink: 0,
+            width: '180px', flexShrink: 0,
             background: '#0d1a33',
             display: 'flex', flexDirection: 'column',
-            padding: '16px 12px', gap: '10px',
+            padding: '16px 10px', gap: '8px',
             overflowY: 'auto',
-            zIndex: 10,
           }}>
-            <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '2px' }}>
-              Fotografías · {fotos.length}
-            </div>
-            {fotos.map((f, i) => (
-              <FotoThumb key={i} foto={f} onClick={() => setLbIndex(i)} />
-            ))}
+            {/* Minimap */}
+            {hasMapa && (
+              <>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '2px' }}>
+                  Ubicación
+                </div>
+                <MapaThumb lat={latNum} lon={lonNum} onClick={() => setMapaOpen(true)} />
+              </>
+            )}
+
+            {/* Fotos */}
+            {hasFoto && (
+              <>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '2px', marginTop: hasMapa ? '4px' : 0 }}>
+                  Fotos · {fotos.length}
+                </div>
+                {fotos.map((f, i) => (
+                  <FotoThumb key={i} foto={f} onClick={() => setLbIndex(i)} />
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
 
-      {/* Lightbox */}
+      {/* Lightbox fotos */}
       {lbIndex !== null && (
         <Lightbox fotos={fotos} index={lbIndex} onClose={lbClose} onPrev={lbPrev} onNext={lbNext} />
+      )}
+
+      {/* Lightbox mapa */}
+      {mapaOpen && hasMapa && (
+        <MapaLightbox lat={latNum} lon={lonNum} onClose={() => setMapaOpen(false)} />
       )}
     </div>
   )
@@ -468,7 +706,7 @@ export default function SlidesPage() {
   useEffect(() => {
     const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
     fetch(`${API}/boletines/${params.id}/export`)
-      .then(r => r.ok ? r.json() : r.json().then((j: { error: string }) => Promise.reject(j.error)))
+      .then(r => r.ok ? r.json() : r.json().then((j: { error: string; message?: string }) => Promise.reject(j.message ?? j.error)))
       .then(setData)
       .catch((e: unknown) => setError(typeof e === 'string' ? e : 'Error al cargar datos'))
   }, [params.id])

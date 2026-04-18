@@ -328,7 +328,12 @@ export async function casosRoutes(app: FastifyInstance) {
 
       const [nuevoLugar] = await tx
         .insert(lugar)
-        .values({ idCaso: nuevoCaso.id, ...lugarData })
+        .values({
+          idCaso: nuevoCaso!.id,
+          ...lugarData,
+          coordenadaLat: lugarData.coordenadaLat !== undefined ? String(lugarData.coordenadaLat) : undefined,
+          coordenadaLon: lugarData.coordenadaLon !== undefined ? String(lugarData.coordenadaLon) : undefined,
+        })
         .returning()
 
       return { ...nuevoCaso, lugar: nuevoLugar }
@@ -343,6 +348,34 @@ export async function casosRoutes(app: FastifyInstance) {
     const resultado = await getCasoCompleto(parseInt(id))
     if (!resultado) return reply.status(404).send({ error: 'Caso no encontrado' })
     return reply.send(resultado)
+  })
+
+  // DELETE /casos/:id — eliminar caso y todos sus sub-recursos
+  app.delete('/:id', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const casoId = parseInt(id)
+
+    const [existente] = await db
+      .select({ id: caso.id })
+      .from(caso)
+      .where(eq(caso.id, casoId))
+      .limit(1)
+
+    if (!existente) return reply.status(404).send({ error: 'Caso no encontrado' })
+
+    await db.transaction(async (tx) => {
+      await tx.delete(casoHashtag).where(eq(casoHashtag.idCaso, casoId))
+      await tx.delete(noticia).where(eq(noticia.idCaso, casoId))
+      await tx.delete(fotografia).where(eq(fotografia.idCaso, casoId))
+      await tx.delete(vehiculo).where(eq(vehiculo.idCaso, casoId))
+      await tx.delete(incautacion).where(eq(incautacion.idCaso, casoId))
+      await tx.delete(victima).where(eq(victima.idCaso, casoId))
+      await tx.delete(imputado).where(eq(imputado.idCaso, casoId))
+      await tx.delete(lugar).where(eq(lugar.idCaso, casoId))
+      await tx.delete(caso).where(eq(caso.id, casoId))
+    })
+
+    return reply.status(204).send()
   })
 
   // PATCH /casos/:id — actualizar campos del caso
@@ -399,6 +432,60 @@ export async function casosRoutes(app: FastifyInstance) {
     return reply.status(204).send()
   })
 
+  // PATCH /casos/:id/lugar — actualizar dirección, sector, comuna, tipo y/o coordenadas
+  app.patch('/:id/lugar', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const { id } = request.params as { id: string }
+    const body = request.body as {
+      direccion?:    string
+      sector?:       string | null
+      idComuna?:     number
+      idTipoLugar?:  number | null
+      coordenadaLat?: number | null
+      coordenadaLon?: number | null
+    }
+
+    const updates: Record<string, unknown> = {}
+    if (body.direccion   !== undefined) updates.direccion   = body.direccion
+    if (body.sector      !== undefined) updates.sector      = body.sector ?? null
+    if (body.idComuna    !== undefined) updates.idComuna    = body.idComuna
+    if (body.idTipoLugar !== undefined) updates.idTipoLugar = body.idTipoLugar ?? null
+    if (body.coordenadaLat !== undefined)
+      updates.coordenadaLat = body.coordenadaLat !== null ? String(body.coordenadaLat) : null
+    if (body.coordenadaLon !== undefined)
+      updates.coordenadaLon = body.coordenadaLon !== null ? String(body.coordenadaLon) : null
+
+    if (Object.keys(updates).length === 0)
+      return reply.status(400).send({ error: 'No se enviaron campos a actualizar' })
+
+    const [updated] = await db
+      .update(lugar)
+      .set(updates)
+      .where(eq(lugar.idCaso, parseInt(id)))
+      .returning({
+        id: lugar.id, direccion: lugar.direccion, sector: lugar.sector,
+        idComuna: lugar.idComuna, idTipoLugar: lugar.idTipoLugar,
+        coordenadaLat: lugar.coordenadaLat, coordenadaLon: lugar.coordenadaLon,
+      })
+
+    if (!updated) return reply.status(404).send({ error: 'Lugar no encontrado' })
+    return reply.send(updated)
+  })
+
+  // PATCH /casos/:id/imputados/:imputadoId/foto — establecer o borrar foto por URL
+  app.patch('/:id/imputados/:imputadoId/foto', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const { id, imputadoId } = request.params as { id: string; imputadoId: string }
+    const { fotoUrl } = request.body as { fotoUrl: string | null }
+
+    const [updated] = await db
+      .update(imputado)
+      .set({ fotoUrl: fotoUrl ?? null })
+      .where(and(eq(imputado.id, parseInt(imputadoId)), eq(imputado.idCaso, parseInt(id))))
+      .returning({ id: imputado.id, fotoUrl: imputado.fotoUrl })
+
+    if (!updated) return reply.status(404).send({ error: 'Imputado no encontrado' })
+    return reply.send(updated)
+  })
+
   // POST /casos/:id/victimas
   app.post('/:id/victimas', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
     const { id } = request.params as { id: string }
@@ -436,7 +523,11 @@ export async function casosRoutes(app: FastifyInstance) {
 
     const [nuevo] = await db
       .insert(incautacion)
-      .values({ idCaso: parseInt(id), ...body.data })
+      .values({
+        idCaso: parseInt(id),
+        ...body.data,
+        cantidad: body.data.cantidad !== undefined ? String(body.data.cantidad) : undefined,
+      })
       .returning()
 
     return reply.status(201).send(nuevo)
@@ -684,7 +775,7 @@ export async function casosRoutes(app: FastifyInstance) {
     // Vincular al caso (ignorar si ya existe)
     await db
       .insert(casoHashtag)
-      .values({ idCaso: casoId, idHashtag: tag.id })
+      .values({ idCaso: casoId, idHashtag: tag!.id })
       .onConflictDoNothing()
 
     return reply.status(201).send(tag)

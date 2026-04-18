@@ -21,6 +21,9 @@ COPY apps/web ./apps/web
 ARG NEXT_PUBLIC_API_URL=http://localhost:8003
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
+# Garantizar que public/ siempre exista (Next.js lo requiere aunque esté vacío)
+RUN mkdir -p /app/apps/web/public
+
 RUN pnpm --filter web build
 
 # ── Etapa 2: runtime (Next.js standalone) ────────────────────────────────────
@@ -29,7 +32,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV PORT=3004
+ENV PORT=3003
 ENV HOSTNAME=0.0.0.0
 
 # El output standalone de Next.js incluye todo lo necesario
@@ -37,7 +40,8 @@ COPY --from=build /app/apps/web/.next/standalone ./
 COPY --from=build /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=build /app/apps/web/public ./apps/web/public
 
-EXPOSE 3004
+EXPOSE 3003
 
-# El servidor standalone queda en apps/web/server.js dentro del directorio de trabajo
+# En monorepo pnpm, standalone refleja la estructura del workspace:
+# server.js queda en apps/web/ dentro del directorio standalone
 CMD ["node", "apps/web/server.js"]

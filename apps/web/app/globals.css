@@ -84,13 +84,78 @@
   --card-bg:        255 255 255;
 }
 
+/* ── Tema: Cyber ──────────────────────────────────────────────────────────── */
+[data-theme="cyber"] {
+  --azul:           0 180 255;
+  --azul-hover:     40 210 255;
+  --azul-claro:     0 20 40;
+  --azul-medio:     0 70 120;
+  --azul-suave:     0 10 22;
+  --rojo:           255 65 30;
+  --rojo-hover:     255 100 55;
+  --rojo-claro:     24 5 2;
+  --rojo-borde:     110 25 10;
+  --gris-bg:        2 6 18;
+  --gris-borde:     0 60 110;
+  --texto:          140 220 255;
+  --texto-suave:    70 160 220;
+  --texto-tenue:    30 90 140;
+  --verde:          0 200 255;
+  --verde-bg:       0 14 30;
+  --verde-borde:    0 80 130;
+  --naranja:        255 210 0;
+  --naranja-bg:     20 15 0;
+  --naranja-borde:  95 68 0;
+  --topbar-bg:      0 4 14;
+  --card-bg:        3 10 24;
+}
+
+/* Grid de fondo estilo terminal — solo en el portal */
+[data-theme="cyber"] .portal-root {
+  background-image:
+    linear-gradient(rgba(0,180,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,180,255,0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* Cards con borde luminoso sutil — solo en el portal */
+[data-theme="cyber"] .portal-root .bg-white {
+  background-color: rgb(3, 10, 24) !important;
+  border-color: rgba(0, 180, 255, 0.2) !important;
+  box-shadow: 0 0 0 1px rgba(0, 180, 255, 0.06), inset 0 0 40px rgba(0,180,255,0.02) !important;
+}
+
+/* Scrollbar neón — solo en el portal */
+[data-theme="cyber"] .portal-root ::-webkit-scrollbar-thumb {
+  background: rgba(0, 180, 255, 0.5);
+  box-shadow: 0 0 8px rgba(0, 180, 255, 0.6);
+}
+[data-theme="cyber"] .portal-root ::-webkit-scrollbar-track {
+  background: rgba(0, 180, 255, 0.04);
+}
+
+/* Inputs con tinte cyber — solo en el portal */
+[data-theme="cyber"] .portal-root input,
+[data-theme="cyber"] .portal-root textarea,
+[data-theme="cyber"] .portal-root select {
+  background-color: rgb(2, 8, 20) !important;
+  color: rgb(140, 220, 255) !important;
+  border-color: rgba(0, 180, 255, 0.3) !important;
+  caret-color: rgb(0, 200, 255);
+}
+[data-theme="cyber"] .portal-root input::placeholder,
+[data-theme="cyber"] .portal-root textarea::placeholder {
+  color: rgba(0, 160, 220, 0.35) !important;
+}
+
 /* ── Base ── */
 *, *::before, *::after {
   box-sizing: border-box;
 }
 
 body {
-  font-family: 'IBM Plex Sans', sans-serif;
+  font-family: var(--font-ui, 'IBM Plex Sans', sans-serif);
   background-color: rgb(var(--gris-bg));
   color: rgb(var(--texto));
   -webkit-font-smoothing: antialiased;

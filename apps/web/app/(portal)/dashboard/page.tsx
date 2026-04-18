@@ -40,7 +40,7 @@ export default function DashboardPage() {
         {/* Cabecera */}
         <div className="mb-6">
           <h1 className="font-serif text-xl font-semibold text-azul">Dashboard SAC</h1>
-          <p className="text-xs text-texto-tenue mt-1">Provincia del Elqui · Región de Coquimbo</p>
+          <p className="text-xs text-texto-tenue mt-1">Fiscalía Regional de Coquimbo</p>
         </div>
 
         {isLoading && (

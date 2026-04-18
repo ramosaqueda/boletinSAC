@@ -36,7 +36,7 @@ export function useIsAnalista() {
 
 // ── Preferencias de apariencia ────────────────────────────────────────────────
 
-export type Tema = 'claro' | 'oscuro' | 'elegante'
+export type Tema = 'claro' | 'oscuro' | 'elegante' | 'cyber'
 
 interface PrefsState {
   tema:        Tema

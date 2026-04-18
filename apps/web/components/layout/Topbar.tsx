@@ -12,6 +12,7 @@ const TEMAS: { id: Tema; label: string; color: string; ring: string }[] = [
   { id: 'claro',    label: 'Claro',    color: '#f4f6f9', ring: '#1C3F81' },
   { id: 'oscuro',   label: 'Oscuro',   color: '#0a0e18', ring: '#4a7fd4' },
   { id: 'elegante', label: 'Índigo',   color: '#f8f7ff', ring: '#4f46e5' },
+  { id: 'cyber',    label: 'Cyber',    color: '#02060e', ring: '#00b4ff' },
 ]
 
 const FONT_SIZES = [13, 14, 15, 16, 17, 18, 20]
@@ -72,8 +73,8 @@ function AparienciaPanel({ onClose }: { onClose: () => void }) {
       <p className="text-[10px] font-bold text-texto-tenue uppercase tracking-wider mb-2 px-1">Tamaño texto</p>
       <div className="flex items-center gap-2 px-1">
         <button
-          onClick={() => { const i = FONT_SIZES.indexOf(fontSize); if (i > 0) setFontSize(FONT_SIZES[i - 1]) }}
-          disabled={fontSize <= FONT_SIZES[0]}
+          onClick={() => { const i = FONT_SIZES.indexOf(fontSize); if (i > 0) setFontSize(FONT_SIZES[i - 1]!) }}
+          disabled={fontSize <= FONT_SIZES[0]!}
           className="w-7 h-7 rounded border border-gris-borde text-texto-suave text-sm font-bold
                      hover:border-azul hover:text-azul transition-colors disabled:opacity-30 disabled:cursor-default"
         >−</button>
@@ -93,8 +94,8 @@ function AparienciaPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         <button
-          onClick={() => { const i = FONT_SIZES.indexOf(fontSize); if (i < FONT_SIZES.length - 1) setFontSize(FONT_SIZES[i + 1]) }}
-          disabled={fontSize >= FONT_SIZES[FONT_SIZES.length - 1]}
+          onClick={() => { const i = FONT_SIZES.indexOf(fontSize); if (i < FONT_SIZES.length - 1) setFontSize(FONT_SIZES[i + 1]!) }}
+          disabled={fontSize >= FONT_SIZES[FONT_SIZES.length - 1]!}
           className="w-7 h-7 rounded border border-gris-borde text-texto-suave text-sm font-bold
                      hover:border-azul hover:text-azul transition-colors disabled:opacity-30 disabled:cursor-default"
         >+</button>
