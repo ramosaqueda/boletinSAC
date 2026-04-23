@@ -426,6 +426,53 @@ export function useEliminarFotografia(casoId: number) {
   })
 }
 
+// ── Conclusiones ──────────────────────────────────────────────────────────────
+
+export type TipoConclusion = 'info' | 'advertencia' | 'tendencia' | 'recomendacion' | 'alerta'
+
+export interface Conclusion {
+  id:        number
+  idBoletin: number
+  orden:     number
+  tipo:      TipoConclusion
+  texto:     string
+  createdAt: string
+}
+
+export function useConclusiones(boletinId: number) {
+  return useQuery({
+    queryKey: ['conclusiones', boletinId],
+    queryFn:  () => api.get<Conclusion[]>(`/boletines/${boletinId}/conclusiones`),
+    enabled:  !!boletinId,
+  })
+}
+
+export function useCrearConclusion(boletinId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { tipo: TipoConclusion; texto: string; orden?: number }) =>
+      api.post<Conclusion>(`/boletines/${boletinId}/conclusiones`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conclusiones', boletinId] }),
+  })
+}
+
+export function useActualizarConclusion(boletinId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; tipo?: TipoConclusion; texto?: string; orden?: number }) =>
+      api.patch<Conclusion>(`/boletines/${boletinId}/conclusiones/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conclusiones', boletinId] }),
+  })
+}
+
+export function useEliminarConclusion(boletinId: number) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.delete(`/boletines/${boletinId}/conclusiones/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['conclusiones', boletinId] }),
+  })
+}
+
 // ── Red asociativa ─────────────────────────────────────────────────────────────
 
 export interface ImputadoConexion {

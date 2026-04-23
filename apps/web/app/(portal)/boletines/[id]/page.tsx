@@ -8,6 +8,7 @@ import { useIsAnalista } from '@/lib/store'
 import { Topbar } from '@/components/layout/Topbar'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { CasoCard } from '@/components/boletin/CasoCard'
+import { ConclusionesEditor } from '@/components/boletin/ConclusionesEditor'
 
 const ESTADO_BADGE: Record<string, string> = {
   borrador:    'bg-azul-claro text-azul border border-azul-medio',
@@ -27,7 +28,7 @@ function formatRango(desde: string, hasta: string) {
 function EditarBoletinModal({
   data, isPending, onClose, onSave,
 }: {
-  data: BoletinDetalle
+  data: BoletinDetalle & { id: number }
   isPending: boolean
   onClose: () => void
   onSave: (valores: {
@@ -119,6 +120,15 @@ function EditarBoletinModal({
           </div>
 
           {error && <p className="text-sm text-rojo bg-[#fff0f0] border border-rojo-borde rounded px-3 py-2">{error}</p>}
+
+          {/* Conclusiones */}
+          <div className="border-t border-gris-borde pt-4 mt-1">
+            <label className={lbl}>Conclusiones del analista</label>
+            <p className="text-[10px] text-texto-tenue mb-3">
+              Aparecen como slide final y sección en el PDF.
+            </p>
+            <ConclusionesEditor boletinId={data.id} />
+          </div>
         </form>
 
         <div className="px-6 py-4 border-t border-gris-borde flex justify-end gap-2 flex-shrink-0">
@@ -376,6 +386,17 @@ export default function BoletinPage({ params }: { params: { id: string } }) {
                 No hay casos para el filtro seleccionado.
               </div>
             )}
+
+            {/* Conclusiones del boletín */}
+            <div className="mt-4 border-t border-gris-borde pt-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-4 w-0.5 bg-azul rounded"/>
+                <h2 className="text-sm font-semibold text-azul uppercase tracking-wide">
+                  Conclusiones del analista
+                </h2>
+              </div>
+              <ConclusionesEditor boletinId={boletinId} readonly={!esAnalista} />
+            </div>
           </div>
         </main>
       </div>

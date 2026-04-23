@@ -62,6 +62,13 @@ interface ExportCaso {
   fotografias: ExportFotografia[]
 }
 
+interface ExportConclusion {
+  id:    number
+  orden: number
+  tipo:  'info' | 'advertencia' | 'tendencia' | 'recomendacion' | 'alerta'
+  texto: string
+}
+
 interface ExportData {
   id: number
   numero: number
@@ -73,6 +80,7 @@ interface ExportData {
   resumen: string | null
   estadoNombre: string
   casos: ExportCaso[]
+  conclusiones: ExportConclusion[]
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -521,6 +529,43 @@ export default function PrintPage() {
         {data.casos.map((c, i) => (
           <CasoSection key={c.id} caso={c} index={i} />
         ))}
+
+        {/* ── Conclusiones del analista ── */}
+        {(data.conclusiones ?? []).length > 0 && (() => {
+          const PRINT_ESTILOS: Record<string, { color: string; bg: string; border: string; label: string }> = {
+            info:          { color: '#1C3F81', bg: '#f0f4fb', border: '#1C3F81', label: 'Información' },
+            tendencia:     { color: '#0369a1', bg: '#f0f9ff', border: '#0ea5e9', label: 'Tendencia' },
+            recomendacion: { color: '#166534', bg: '#f0fdf4', border: '#22c55e', label: 'Recomendación' },
+            advertencia:   { color: '#92400e', bg: '#fffbeb', border: '#f59e0b', label: 'Advertencia' },
+            alerta:        { color: '#991b1b', bg: '#fff1f2', border: '#ef4444', label: 'Alerta' },
+          }
+          return (
+            <div style={{ marginTop: '20pt', pageBreakBefore: 'auto' }}>
+              <SectionTitle>Conclusiones del analista</SectionTitle>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6pt' }}>
+                {(data.conclusiones ?? []).map((c) => {
+                  const est = PRINT_ESTILOS[c.tipo] ?? PRINT_ESTILOS.info!
+                  return (
+                    <div key={c.id} style={{
+                      background: est.bg,
+                      borderLeft: `3pt solid ${est.border}`,
+                      borderRadius: '3pt',
+                      padding: '6pt 10pt',
+                      pageBreakInside: 'avoid',
+                    }}>
+                      <div style={{ fontSize: '6.5pt', fontWeight: 700, color: est.color, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '3pt' }}>
+                        {est.label}
+                      </div>
+                      <p style={{ fontSize: '8pt', lineHeight: 1.55, color: '#222', margin: 0, whiteSpace: 'pre-wrap' }}>
+                        {c.texto}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* ── Pie de página ── */}
         <div style={{

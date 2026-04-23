@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
+import { LogoFiscalia } from '@/components/LogoFiscalia'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,13 @@ interface Caso {
   noticias: Noticia[]
 }
 
+interface Conclusion {
+  id:    number
+  orden: number
+  tipo:  'info' | 'advertencia' | 'tendencia' | 'recomendacion' | 'alerta'
+  texto: string
+}
+
 interface ExportData {
   numero: number
   fechaDesde: string
@@ -67,6 +75,7 @@ interface ExportData {
   analista: string | null
   resumen: string | null
   casos: Caso[]
+  conclusiones: Conclusion[]
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -89,9 +98,55 @@ function SlidePortada({ data }: { data: ExportData }) {
   const totalPrev  = data.casos.filter(c => c.estadoCausaNombre.toLowerCase().includes('preventiva')).length
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: '#1C3F81' }}>
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'linear-gradient(145deg, #0e2550 0%, #1C3F81 45%, #122d6b 100%)', position: 'relative', overflow: 'hidden' }}>
+
+      {/* ── Fondo animado ── */}
+      {/* Orb azul grande — esquina superior izquierda */}
+      <div style={{
+        position: 'absolute', width: '700px', height: '700px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(80,140,255,0.13) 0%, transparent 68%)',
+        top: '-180px', left: '-160px',
+        animation: 'portada-orb-1 20s ease-in-out infinite',
+        pointerEvents: 'none',
+      }} />
+      {/* Orb rojo — esquina inferior derecha */}
+      <div style={{
+        position: 'absolute', width: '480px', height: '480px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(215,15,22,0.1) 0%, transparent 68%)',
+        bottom: '-60px', right: '-60px',
+        animation: 'portada-orb-2 26s ease-in-out infinite',
+        pointerEvents: 'none',
+      }} />
+      {/* Orb celeste — centro derecha */}
+      <div style={{
+        position: 'absolute', width: '520px', height: '520px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(100,180,255,0.08) 0%, transparent 68%)',
+        top: '20%', right: '-80px',
+        animation: 'portada-orb-3 32s ease-in-out infinite',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Grilla sutil */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)',
+        backgroundSize: '64px 64px',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Barrido diagonal */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.03) 50%, transparent 70%)',
+        animation: 'portada-sweep 8s ease-in-out infinite',
+        pointerEvents: 'none',
+      }} />
+
       {/* Banda superior */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 80px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '60px 80px', position: 'relative', zIndex: 1 }}>
+        <div style={{ marginBottom: '20px' }}>
+          <LogoFiscalia style={{ height: '36px', filter: 'brightness(0) invert(1)', display: 'block' }} />
+        </div>
         <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '12px' }}>
           Ministerio Público · Fiscalía de Chile · {data.region ?? 'Región de Coquimbo'}
         </div>
@@ -131,6 +186,7 @@ function SlidePortada({ data }: { data: ExportData }) {
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
         borderTop: '1px solid rgba(255,255,255,0.15)',
+        position: 'relative', zIndex: 1,
       }}>
         {[
           { n: data.casos.length, label: 'Casos semana' },
@@ -460,14 +516,16 @@ function SlideCaso({ caso }: { caso: Caso }) {
       {/* ── Encabezado ── */}
       <div style={{
         background: '#1C3F81', color: 'white',
-        padding: '20px 48px',
+        padding: '14px 48px',
         display: 'flex', alignItems: 'center', gap: '32px', flexShrink: 0,
       }}>
+        <LogoFiscalia style={{ height: '24px', filter: 'brightness(0) invert(1)', flexShrink: 0 }} />
+        <div style={{ width: '1px', height: '32px', background: 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
         <div style={{ textAlign: 'center', minWidth: '72px' }}>
           <div style={{ fontSize: '10px', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Caso</div>
           <div style={{ fontSize: '42px', fontWeight: 800, lineHeight: 1 }}>{caso.numeroCaso}</div>
         </div>
-        <div style={{ width: '1px', height: '48px', background: 'rgba(255,255,255,0.2)' }} />
+        <div style={{ width: '1px', height: '48px', background: 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '20px', fontWeight: 700 }}>{caso.tipoDelitoNombre}</div>
           <div style={{ fontSize: '13px', opacity: 0.7, marginTop: '3px' }}>
@@ -682,6 +740,87 @@ function SlideCaso({ caso }: { caso: Caso }) {
   )
 }
 
+// ── Slide: Conclusiones ────────────────────────────────────────────────────────
+
+const CONCLUSION_ESTILOS: Record<string, { color: string; bg: string; label: string; icon: React.ReactNode }> = {
+  info: {
+    color: '#4a7fd4', bg: 'rgba(74,127,212,0.12)', label: 'Información',
+    icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="10" cy="10" r="8"/><path d="M10 9v5M10 7h.01"/></svg>,
+  },
+  tendencia: {
+    color: '#0ea5e9', bg: 'rgba(14,165,233,0.12)', label: 'Tendencia',
+    icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="2,14 7,8 12,11 18,4"/><polyline points="14,4 18,4 18,8"/></svg>,
+  },
+  recomendacion: {
+    color: '#22c55e', bg: 'rgba(34,197,94,0.12)', label: 'Recomendación',
+    icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M4 10l5 5 7-8"/></svg>,
+  },
+  advertencia: {
+    color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', label: 'Advertencia',
+    icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 2L2 17h16L10 2z"/><path d="M10 9v4M10 15h.01"/></svg>,
+  },
+  alerta: {
+    color: '#ef4444', bg: 'rgba(239,68,68,0.12)', label: 'Alerta',
+    icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="10" cy="10" r="8"/><path d="M10 6v5M10 14h.01"/></svg>,
+  },
+}
+
+function SlideConclusiones({ data }: { data: ExportData }) {
+  const conclusiones = data.conclusiones ?? []
+  return (
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: '#f8faff' }}>
+
+      {/* Encabezado */}
+      <div style={{
+        background: '#1C3F81', color: 'white',
+        padding: '20px 48px',
+        display: 'flex', alignItems: 'center', gap: '32px', flexShrink: 0,
+      }}>
+        <LogoFiscalia style={{ height: '24px', filter: 'brightness(0) invert(1)', flexShrink: 0 }} />
+        <div style={{ width: '1px', height: '32px', background: 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '20px', fontWeight: 700 }}>Conclusiones del analista</div>
+          <div style={{ fontSize: '13px', opacity: 0.7, marginTop: '3px' }}>
+            Reporte N° {data.numero} · {data.analista ?? ''}
+          </div>
+        </div>
+      </div>
+
+      {/* Cuerpo */}
+      <div style={{ flex: 1, padding: '28px 48px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {conclusiones.length === 0 && (
+          <div style={{ color: '#aaa', fontSize: '14px', textAlign: 'center', marginTop: '40px' }}>
+            No hay conclusiones registradas para este boletín.
+          </div>
+        )}
+        {conclusiones.map((c) => {
+          const est = CONCLUSION_ESTILOS[c.tipo] ?? CONCLUSION_ESTILOS.info!
+          return (
+            <div key={c.id} style={{
+              display: 'flex', alignItems: 'flex-start', gap: '16px',
+              background: est.bg,
+              border: `1px solid ${est.color}30`,
+              borderLeft: `4px solid ${est.color}`,
+              borderRadius: '8px',
+              padding: '14px 20px',
+            }}>
+              <div style={{ color: est.color, marginTop: '2px', flexShrink: 0 }}>{est.icon}</div>
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: est.color, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '5px' }}>
+                  {est.label}
+                </div>
+                <p style={{ fontSize: '15px', color: '#222', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>
+                  {c.texto}
+                </p>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
@@ -711,7 +850,7 @@ export default function SlidesPage() {
       .catch((e: unknown) => setError(typeof e === 'string' ? e : 'Error al cargar datos'))
   }, [params.id])
 
-  const total = data ? data.casos.length + 1 : 0 // +1 portada
+  const total = data ? data.casos.length + 2 : 0 // portada + casos + conclusiones
 
   const goTo = useCallback((idx: number) => {
     if (!data || transitioning) return
@@ -753,9 +892,10 @@ export default function SlidesPage() {
     )
   }
 
-  const isFirst = current === 0
-  const isLast  = current === total - 1
-  const caso    = !isFirst ? data.casos[current - 1] : null
+  const isFirst        = current === 0
+  const isLast         = current === total - 1
+  const isConclusiones = current === total - 1
+  const caso           = !isFirst && !isConclusiones ? data.casos[current - 1] : null
 
   return (
     <div style={{
@@ -776,7 +916,9 @@ export default function SlidesPage() {
         }}>
           {isFirst
             ? <SlidePortada data={data} />
-            : caso && <SlideCaso caso={caso} />
+            : isConclusiones
+              ? <SlideConclusiones data={data} />
+              : caso && <SlideCaso caso={caso} />
           }
         </div>
 
@@ -844,6 +986,27 @@ export default function SlidesPage() {
       <style>{`
         body { margin: 0; overflow: hidden; background: #0d1a33; }
         @keyframes lb-in { from { opacity: 0; } to { opacity: 1; } }
+
+        @keyframes portada-orb-1 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          33%     { transform: translate(70px, 50px) scale(1.08); }
+          66%     { transform: translate(-30px, 90px) scale(0.94); }
+        }
+        @keyframes portada-orb-2 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          40%     { transform: translate(-90px,-50px) scale(1.12); }
+          70%     { transform: translate(50px, 70px) scale(0.92); }
+        }
+        @keyframes portada-orb-3 {
+          0%,100% { transform: translate(0,0) scale(1); }
+          30%     { transform: translate(-60px, 100px) scale(1.06); }
+          60%     { transform: translate(40px, -50px) scale(1.1); }
+        }
+        @keyframes portada-sweep {
+          0%,100% { transform: translateX(-60%); opacity: 0; }
+          40%,60% { opacity: 1; }
+          50%     { transform: translateX(60%); }
+        }
       `}</style>
     </div>
   )

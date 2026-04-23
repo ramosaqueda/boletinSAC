@@ -1,12 +1,20 @@
 import type { FastifyInstance } from 'fastify'
-import { eq, desc, inArray } from 'drizzle-orm'
+import { eq, desc, inArray, asc } from 'drizzle-orm'
 import { z } from 'zod'
 import { db } from '../db/index.js'
 import {
   boletin, caso, imputado, victima, incautacion, lugar, noticia, fotografia, fiscal,
   pEstadoBoletin, pTipoDelito, pEstadoCausa, pComuna, pTipoEspecie,
-  pCalidadVictima, pTipoLesiones, pTipoFoto, usuario,
+  pCalidadVictima, pTipoLesiones, pTipoFoto, usuario, boletinConclusion,
 } from '../db/schema.js'
+
+const TIPOS_CONCLUSION = ['info', 'advertencia', 'tendencia', 'recomendacion', 'alerta'] as const
+
+const ConclusionSchema = z.object({
+  tipo:  z.enum(TIPOS_CONCLUSION).default('info'),
+  texto: z.string().min(1).max(2000),
+  orden: z.number().int().min(0).optional(),
+})
 
 // ── Schemas de validación ─────────────────────────────────────────────────────
 
@@ -271,7 +279,19 @@ export async function boletinesRoutes(app: FastifyInstance) {
       }
     }))
 
-    return reply.send({ ...cab, casos: casosConDetalle })
+    // Conclusiones del boletín
+    const conclusionesBoletin = await db
+      .select({
+        id:    boletinConclusion.id,
+        orden: boletinConclusion.orden,
+        tipo:  boletinConclusion.tipo,
+        texto: boletinConclusion.texto,
+      })
+      .from(boletinConclusion)
+      .where(eq(boletinConclusion.idBoletin, boletinId))
+      .orderBy(asc(boletinConclusion.orden), asc(boletinConclusion.id))
+
+    return reply.send({ ...cab, casos: casosConDetalle, conclusiones: conclusionesBoletin })
   })
 
   // PATCH /boletines/:id/publicar — marcar como publicado (sólo analistas)
@@ -355,6 +375,65 @@ export async function boletinesRoutes(app: FastifyInstance) {
       await tx.delete(boletin).where(eq(boletin.id, boletinId))
     })
 
+    return reply.status(204).send()
+  })
+
+  // ── Conclusiones ─────────────────────────────────────────────────────────────
+
+  // GET /boletines/:id/conclusiones
+  app.get('/:id/conclusiones', {}, async (request, reply) => {
+    const boletinId = parseInt((request.params as { id: string }).id)
+    const rows = await db
+      .select()
+      .from(boletinConclusion)
+      .where(eq(boletinConclusion.idBoletin, boletinId))
+      .orderBy(asc(boletinConclusion.orden), asc(boletinConclusion.id))
+    return reply.send(rows)
+  })
+
+  // POST /boletines/:id/conclusiones
+  app.post('/:id/conclusiones', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const boletinId = parseInt((request.params as { id: string }).id)
+    const body = ConclusionSchema.safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: 'Datos inválidos', details: body.error.flatten() })
+
+    const [existente] = await db.select({ id: boletin.id }).from(boletin).where(eq(boletin.id, boletinId)).limit(1)
+    if (!existente) return reply.status(404).send({ error: 'Boletín no encontrado' })
+
+    const [nueva] = await db
+      .insert(boletinConclusion)
+      .values({ idBoletin: boletinId, tipo: body.data.tipo, texto: body.data.texto, orden: body.data.orden ?? 0 })
+      .returning()
+    return reply.status(201).send(nueva)
+  })
+
+  // PATCH /boletines/:id/conclusiones/:cid
+  app.patch('/:id/conclusiones/:cid', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const boletinId = parseInt((request.params as { id: string; cid: string }).id)
+    const cid       = parseInt((request.params as { id: string; cid: string }).cid)
+    const body = ConclusionSchema.partial().safeParse(request.body)
+    if (!body.success) return reply.status(400).send({ error: 'Datos inválidos', details: body.error.flatten() })
+
+    const [existente] = await db.select({ id: boletinConclusion.id }).from(boletinConclusion)
+      .where(eq(boletinConclusion.id, cid)).limit(1)
+    if (!existente) return reply.status(404).send({ error: 'Conclusión no encontrada' })
+
+    const vals: Partial<typeof boletinConclusion.$inferInsert> = {}
+    if (body.data.tipo  !== undefined) vals.tipo  = body.data.tipo
+    if (body.data.texto !== undefined) vals.texto = body.data.texto
+    if (body.data.orden !== undefined) vals.orden = body.data.orden
+
+    const [actualizada] = await db
+      .update(boletinConclusion).set(vals)
+      .where(eq(boletinConclusion.id, cid))
+      .returning()
+    return reply.send(actualizada)
+  })
+
+  // DELETE /boletines/:id/conclusiones/:cid
+  app.delete('/:id/conclusiones/:cid', { preHandler: [app.authenticate, app.authorizeAnalista] }, async (request, reply) => {
+    const cid = parseInt((request.params as { id: string; cid: string }).cid)
+    await db.delete(boletinConclusion).where(eq(boletinConclusion.id, cid))
     return reply.status(204).send()
   })
 

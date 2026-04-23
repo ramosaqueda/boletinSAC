@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/store'
+import { LogoFiscalia } from '@/components/LogoFiscalia'
 
 export default function LoginPage() {
   const router   = useRouter()
@@ -37,15 +38,16 @@ export default function LoginPage() {
          style={{ background: 'linear-gradient(160deg, #1C3F81 0%, #122a58 100%)' }}>
 
       {/* Logo / cabecera institucional */}
-      <div className="mb-8 text-center">
-        <div className="text-xs font-semibold tracking-widest text-white/50 uppercase mb-2">
+      <div className="mb-8 text-center flex flex-col items-center gap-3">
+        <LogoFiscalia className="h-10 brightness-0 invert" />
+        <div className="text-xs font-semibold tracking-widest text-white/50 uppercase">
           Ministerio Público · Región de Coquimbo
         </div>
         <div className="text-white text-2xl font-serif font-semibold leading-tight">
           Portal SAC
         </div>
-        <div className="mt-1 h-0.5 w-16 bg-rojo mx-auto rounded"/>
-        <div className="text-white/60 text-xs mt-2">
+        <div className="h-0.5 w-16 bg-rojo rounded"/>
+        <div className="text-white/60 text-xs">
           Sistema de Gestión de Boletines de Criminalidad
         </div>
       </div>

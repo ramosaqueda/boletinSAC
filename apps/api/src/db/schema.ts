@@ -275,6 +275,19 @@ export const casoHashtag = pgTable('caso_hashtag', {
 }, (t) => ({ pk: unique().on(t.idCaso, t.idHashtag) }))
 
 // =============================================================================
+// TABLA: boletin_conclusion
+// =============================================================================
+
+export const boletinConclusion = pgTable('boletin_conclusion', {
+  id:        serial('id').primaryKey(),
+  idBoletin: integer('id_boletin').notNull().references(() => boletin.id, { onDelete: 'cascade' }),
+  orden:     smallint('orden').notNull().default(0),
+  tipo:      varchar('tipo', { length: 20 }).notNull().default('info'),
+  texto:     text('texto').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+})
+
+// =============================================================================
 // RELATIONS — para Drizzle relational queries (db.query.*)
 // =============================================================================
 
@@ -285,9 +298,14 @@ export const usuarioRelations = relations(usuario, ({ one, many }) => ({
 }))
 
 export const boletinRelations = relations(boletin, ({ one, many }) => ({
-  analista: one(usuario,        { fields: [boletin.idAnalista], references: [usuario.id] }),
-  estado:   one(pEstadoBoletin, { fields: [boletin.idEstado],   references: [pEstadoBoletin.id] }),
-  casos:    many(caso),
+  analista:     one(usuario,           { fields: [boletin.idAnalista], references: [usuario.id] }),
+  estado:       one(pEstadoBoletin,    { fields: [boletin.idEstado],   references: [pEstadoBoletin.id] }),
+  casos:        many(caso),
+  conclusiones: many(boletinConclusion),
+}))
+
+export const boletinConclusionRelations = relations(boletinConclusion, ({ one }) => ({
+  boletin: one(boletin, { fields: [boletinConclusion.idBoletin], references: [boletin.id] }),
 }))
 
 export const fiscalRelations = relations(fiscal, ({ many }) => ({
@@ -371,4 +389,6 @@ export type Victima       = typeof victima.$inferSelect
 export type Incautacion   = typeof incautacion.$inferSelect
 export type Vehiculo      = typeof vehiculo.$inferSelect
 export type Fotografia    = typeof fotografia.$inferSelect
-export type Noticia       = typeof noticia.$inferSelect
+export type Noticia            = typeof noticia.$inferSelect
+export type BoletinConclusion  = typeof boletinConclusion.$inferSelect
+export type NuevaConclusion    = typeof boletinConclusion.$inferInsert

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useState, useRef, useEffect } from 'react'
 import { useAuthStore, usePrefsStore, type Tema } from '@/lib/store'
+import { LogoFiscalia } from '@/components/LogoFiscalia'
 
 interface TopbarProps {
   onNuevoCaso?: () => void
@@ -127,17 +128,8 @@ export function Topbar({ onNuevoCaso }: TopbarProps) {
             style={{ background: 'rgb(var(--topbar-bg))', transition: 'background 0.25s ease' }}>
 
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 border-r border-white/15">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://www.fiscaliadechile.cl/themes/fiscalia_theme/logo_fiscalia.svg"
-          alt="Fiscalía de Chile"
-          className="h-8 brightness-0 invert"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-        />
-        <div className="text-[11px] font-semibold text-white tracking-wider uppercase leading-tight">
-          Fiscalía<br/>de Chile
-        </div>
+      <div className="flex items-center px-5 border-r border-white/15">
+        <LogoFiscalia className="h-7 brightness-0 invert" />
       </div>
 
       {/* Título */}
