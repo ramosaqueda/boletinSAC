@@ -8,3 +8,7 @@ build/
 *.log
 .DS_Store
 .turbo/
+
+# Claude Code
+.claude/
+CLAUDE_1.md
